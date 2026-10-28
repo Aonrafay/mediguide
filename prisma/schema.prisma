@@ -1,0 +1,233 @@
+// MediGuide — Prisma schema (SQLite for development)
+// NOTE: SQLite has no enums/arrays — those are modeled as String fields and
+// validated in application code (see src/lib/constants.ts). The schema is
+// written so it can be switched to PostgreSQL later with minimal changes.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("PATIENT") // ADMIN | DOCTOR | PATIENT
+  phone        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  doctorProfile Doctor?
+  appointments  Appointment[] @relation("PatientAppointments")
+  reviews       Review[]
+  favourites    Favourite[]
+  notifications Notification[]
+}
+
+model Country {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  code      String   @unique // ISO-2, e.g. "PK"
+  flagImage String?
+  phoneCode String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cities City[]
+}
+
+model City {
+  id        String   @id @default(cuid())
+  name      String
+  countryId String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  country    Country @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  facilities Facility[]
+
+  @@index([countryId])
+  @@unique([countryId, name])
+}
+
+model FacilityType {
+  id       String  @id @default(cuid())
+  name     String  @unique // Hospital | Clinic | Medical Complex | Lab
+  icon     String?
+  isActive Boolean @default(true)
+
+  facilities Facility[]
+}
+
+model Facility {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  address     String
+  phone       String?
+  email       String?
+  images      String   @default("[]") // JSON array of image URLs
+  mapUrl      String?
+  isVerified  Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  cityId      String
+  typeId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  city         City          @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  type         FacilityType  @relation(fields: [typeId], references: [id])
+  doctors      Doctor[]
+  appointments Appointment[]
+
+  @@index([cityId, typeId])
+}
+
+model Specialty {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  icon        String?
+  description String?
+  isActive    Boolean @default(true)
+
+  doctors Doctor[]
+}
+
+model Doctor {
+  id              String   @id @default(cuid())
+  userId          String?  @unique // optional linked login account
+  facilityId      String
+  specialtyId     String
+  name            String
+  gender          String? // MALE | FEMALE
+  qualification   String   // e.g. "MBBS, FCPS (Cardiology)"
+  experienceYears Int      @default(0)
+  inPersonFee     Float    @default(0)
+  videoFee        Float?
+  photo           String?
+  about           String?
+  languages       String   @default("[]") // JSON array of language names
+  offersVideo     Boolean  @default(false)
+  rating          Float    @default(0) // denormalized average from approved reviews
+  reviewCount     Int      @default(0)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user         User?          @relation(fields: [userId], references: [id])
+  facility     Facility       @relation(fields: [facilityId], references: [id])
+  specialty    Specialty      @relation(fields: [specialtyId], references: [id])
+  availability Availability[]
+  appointments Appointment[]
+  reviews      Review[]
+  favourites   Favourite[]
+
+  @@index([facilityId])
+  @@index([specialtyId])
+}
+
+model Availability {
+  id              String  @id @default(cuid())
+  doctorId        String
+  dayOfWeek       Int // 0 = Sunday ... 6 = Saturday
+  startTime       String // "09:00"
+  endTime         String // "17:00"
+  slotDurationMin Int     @default(30)
+  mode            String  @default("BOTH") // IN_PERSON | VIDEO | BOTH
+  isActive        Boolean @default(true)
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, dayOfWeek, startTime, mode])
+}
+
+model Appointment {
+  id            String   @id @default(cuid())
+  patientId     String
+  doctorId      String
+  facilityId    String
+  date          DateTime // appointment day (time part unused)
+  timeSlot      String   // "09:30"
+  mode          String // IN_PERSON | VIDEO
+  status        String   @default("PENDING") // PENDING | CONFIRMED | COMPLETED | CANCELLED
+  notes         String?
+  meetingLink   String?  // video consultation link (Jitsi)
+  meetingStatus String?  // SCHEDULED | LIVE | ENDED (video only)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  patient User     @relation("PatientAppointments", fields: [patientId], references: [id])
+  doctor  Doctor   @relation(fields: [doctorId], references: [id])
+  facility Facility @relation(fields: [facilityId], references: [id])
+
+  @@index([doctorId, date])
+  @@index([patientId])
+  @@unique([doctorId, date, timeSlot, mode])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  patientId  String
+  doctorId   String
+  rating     Int // 1..5
+  comment    String?
+  isApproved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  patient User   @relation(fields: [patientId], references: [id])
+  doctor  Doctor @relation(fields: [doctorId], references: [id])
+
+  @@unique([patientId, doctorId])
+}
+
+model Favourite {
+  patientId String
+  doctorId  String
+  createdAt DateTime @default(now())
+
+  patient User   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor  Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@id([patientId, doctorId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Language {
+  code       String  @id // "en", "ar", "ur"
+  name       String // "English"
+  nativeName String // "English", "العربية", "اردو"
+  direction  String  @default("ltr") // ltr | rtl
+  isActive   Boolean @default(true)
+  isDefault  Boolean @default(false)
+}
+
+model ContentTranslation {
+  id           String @id @default(cuid())
+  entityType   String // Country | City | Facility | FacilityType | Specialty | Doctor
+  entityId     String
+  languageCode String
+  field        String // name | about | description
+  value        String
+
+  @@unique([entityType, entityId, languageCode, field])
+  @@index([entityType, entityId])
+}
