@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { Stars } from "@/components/patient/cards";
+import { Avatar, Stars } from "@/components/patient/cards";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { cancelAppointment } from "@/lib/actions/booking";
@@ -41,18 +41,45 @@ export default async function AccountPage({
 
   const { booked } = await searchParams;
 
-  const appointments = (await db.appointment.findMany({
-    where: { patientId: session.userId },
-    orderBy: [{ date: "desc" }, { timeSlot: "desc" }],
-    include: {
-      doctor: {
-        include: {
-          specialty: true,
-          facility: { include: { city: true } },
+  const [appointments, favourites, unreadNotifications] = await Promise.all([
+    db.appointment.findMany({
+      where: { patientId: session.userId },
+      orderBy: [{ date: "desc" }, { timeSlot: "desc" }],
+      include: {
+        doctor: {
+          include: {
+            specialty: true,
+            facility: { include: { city: true } },
+          },
         },
       },
-    },
-  })) as AppointmentRow[];
+    }),
+    db.favourite.findMany({
+      where: { patientId: session.userId },
+      include: {
+        doctor: {
+          include: {
+            specialty: true,
+            facility: { include: { city: true } },
+          },
+        },
+      },
+    }),
+    db.notification.count({ where: { userId: session.userId, isRead: false } }),
+  ]) as unknown as [
+    AppointmentRow[],
+    Array<{
+      doctor: {
+        id: string;
+        name: string;
+        rating: number;
+        reviewCount: number;
+        specialty: { name: string; icon: string | null };
+        facility: { name: string; city: { name: string } };
+      };
+    }>,
+    number,
+  ];
 
   // "Today" starts at UTC midnight — appointments today stay Upcoming all day
   const now = new Date();
@@ -73,12 +100,25 @@ export default async function AccountPage({
           <h1 className="text-3xl font-bold text-slate-900">My Appointments</h1>
           <p className="mt-1 text-slate-500">Welcome back, {session.name}</p>
         </div>
-        <Link
-          href="/doctors"
-          className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-700"
-        >
-          + Book new appointment
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/account/notifications"
+            className="relative rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+          >
+            🔔 Notifications
+            {unreadNotifications > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
+                {unreadNotifications}
+              </span>
+            )}
+          </Link>
+          <Link
+            href="/doctors"
+            className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-700"
+          >
+            + Book new appointment
+          </Link>
+        </div>
       </header>
 
       {booked === "1" && (
@@ -108,6 +148,38 @@ export default async function AccountPage({
           )}
         </div>
       </section>
+
+      {/* Favourites */}
+      {favourites.length > 0 && (
+        <section className="mt-10">
+          <h2 className="text-xl font-bold text-slate-900">
+            ❤️ My favourite doctors ({favourites.length})
+          </h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {favourites.map((fav) => (
+              <Link
+                key={fav.doctor.id}
+                href={`/doctor/${fav.doctor.id}`}
+                className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-teal-300 hover:shadow-sm"
+              >
+                <Avatar name={fav.doctor.name} size="h-11 w-11 text-sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-slate-900">
+                    {fav.doctor.name}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {fav.doctor.specialty.icon} {fav.doctor.specialty.name} ·{" "}
+                    {fav.doctor.facility.name}
+                  </p>
+                </div>
+                {fav.doctor.reviewCount > 0 && (
+                  <Stars rating={fav.doctor.rating} />
+                )}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* History */}
       {past.length > 0 && (

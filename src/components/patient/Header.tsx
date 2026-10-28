@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { logout } from "@/lib/actions/auth";
 import { getSession } from "@/lib/auth";
+import { unreadNotificationCount } from "@/lib/notifications";
 
 /** Language switcher — functional in Phase 6 (multi-language). */
 function LanguageChip() {
@@ -17,6 +18,10 @@ function LanguageChip() {
 
 export default async function PatientHeader() {
   const session = await getSession();
+  const unread =
+    session && session.role === "PATIENT"
+      ? await unreadNotificationCount(session.userId)
+      : 0;
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
@@ -46,12 +51,26 @@ export default async function PatientHeader() {
             Find Doctors
           </Link>
           {session?.role === "PATIENT" && (
-            <Link
-              href="/account"
-              className="rounded-full px-3 py-1.5 font-medium text-slate-600 transition hover:bg-slate-100"
-            >
-              My Appointments
-            </Link>
+            <>
+              <Link
+                href="/account"
+                className="rounded-full px-3 py-1.5 font-medium text-slate-600 transition hover:bg-slate-100"
+              >
+                My Appointments
+              </Link>
+              <Link
+                href="/account/notifications"
+                title="Notifications"
+                className="relative rounded-full px-2.5 py-1.5 text-slate-600 transition hover:bg-slate-100"
+              >
+                🔔
+                {unread > 0 && (
+                  <span className="absolute -right-0.5 top-0 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
+                    {unread > 9 ? "9+" : unread}
+                  </span>
+                )}
+              </Link>
+            </>
           )}
           <LanguageChip />
           {session ? (

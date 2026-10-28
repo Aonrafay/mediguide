@@ -6,7 +6,13 @@ import { redirect } from "next/navigation";
 
 import { getSession, requireRole, setSessionCookie, signSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { APPOINTMENT_MODES, APPOINTMENT_STATUSES } from "@/lib/constants";
+import { notify, notifyAdmins } from "@/lib/notifications";
+import {
+  APPOINTMENT_MODES,
+  APPOINTMENT_STATUSES,
+  APPOINTMENT_STATUS_LABELS,
+} from "@/lib/constants";
+import { formatDateUTC } from "@/lib/utils";
 
 /* ------------------------------- helpers -------------------------------- */
 
@@ -201,6 +207,18 @@ export async function bookAppointment(formData: FormData) {
         data: { meetingLink: `https://meet.jit.si/mediguide-${appointmentId}` },
       });
     }
+
+    // Notifications (best effort)
+    const when = `${formatDateUTC(date)} at ${timeSlot}`;
+    await notify(
+      session.userId,
+      "Appointment booked 🎉",
+      `Your ${mode === "VIDEO" ? "video consultation" : "in-person visit"} with ${doctor.name} is booked for ${when}.`
+    );
+    await notifyAdmins(
+      "New appointment booked",
+      `${session.name} booked ${doctor.name} (${mode === "VIDEO" ? "video" : "in-person"}) for ${when}.`
+    );
   } catch (caught) {
     return fail(friendlyError(caught));
   }
@@ -222,6 +240,19 @@ export async function cancelAppointment(formData: FormData) {
         where: { id },
         data: { status: "CANCELLED" },
       });
+      // Notify admins (best effort)
+      const doctor = await db.doctor.findUnique({
+        where: { id: appointment.doctorId },
+        select: { name: true },
+      });
+      const patient = await db.user.findUnique({
+        where: { id: session.userId },
+        select: { name: true },
+      });
+      await notifyAdmins(
+        "Appointment cancelled",
+        `${patient?.name ?? "A patient"} cancelled the appointment with ${doctor?.name ?? "the doctor"} on ${formatDateUTC(appointment.date)} at ${appointment.timeSlot}.`
+      );
     }
   }
   revalidatePath("/account");
@@ -250,6 +281,31 @@ export async function updateAppointmentStatus(formData: FormData) {
             : {}),
         },
       });
+
+      // Notify the patient about the status change (best effort)
+      const [doctor, patient] = await Promise.all([
+        db.doctor.findUnique({
+          where: { id: appointment.doctorId },
+          select: { name: true },
+        }),
+        db.user.findUnique({
+          where: { id: appointment.patientId },
+          select: { name: true },
+        }),
+      ]);
+      const when = `${formatDateUTC(appointment.date)} at ${appointment.timeSlot}`;
+      const statusMessages: Record<string, string> = {
+        CONFIRMED: `Your appointment with ${doctor?.name ?? "the doctor"} on ${when} is confirmed ✅`,
+        COMPLETED: `Your visit with ${doctor?.name ?? "the doctor"} on ${when} is marked completed — leave a review! ⭐`,
+        CANCELLED: `Your appointment with ${doctor?.name ?? "the doctor"} on ${when} was cancelled.`,
+        PENDING: `Your appointment with ${doctor?.name ?? "the doctor"} on ${when} is pending again.`,
+      };
+      await notify(
+        appointment.patientId,
+        `Appointment ${APPOINTMENT_STATUS_LABELS[status as "CONFIRMED"].toLowerCase()}`,
+        statusMessages[status] ?? `Your appointment status changed to ${status}.`
+      );
+      void patient;
     }
   }
   revalidatePath("/admin/appointments");

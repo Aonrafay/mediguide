@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Avatar, Stars } from "@/components/patient/cards";
+import FavouriteButton from "@/components/patient/FavouriteButton";
+import ReviewForm from "@/components/patient/ReviewForm";
+import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   APPOINTMENT_MODE_LABELS,
@@ -20,8 +23,9 @@ export async function generateMetadata({ params }: Props) {
   return { title: doctor?.name ?? "Doctor" };
 }
 
-export default async function DoctorPage({ params }: Props) {
+export default async function DoctorPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const { reviewed } = await searchParams;
   const doctor = await db.doctor.findUnique({
     where: { id },
     include: {
@@ -41,6 +45,37 @@ export default async function DoctorPage({ params }: Props) {
   if (!doctor || !doctor.isActive) notFound();
 
   const languages = parseJsonArray(doctor.languages);
+
+  // Patient-specific state: favourite flag + review eligibility
+  const session = await getSession();
+  let isFavourite = false;
+  let canReview = false;
+  let existingReview: { rating: number; comment: string | null } | null = null;
+  if (session?.role === "PATIENT") {
+    const [favourite, completed, review] = await Promise.all([
+      db.favourite.findUnique({
+        where: {
+          patientId_doctorId: { patientId: session.userId, doctorId: doctor.id },
+        },
+      }),
+      db.appointment.findFirst({
+        where: {
+          patientId: session.userId,
+          doctorId: doctor.id,
+          status: "COMPLETED",
+        },
+        select: { id: true },
+      }),
+      db.review.findUnique({
+        where: {
+          patientId_doctorId: { patientId: session.userId, doctorId: doctor.id },
+        },
+      }),
+    ]);
+    isFavourite = !!favourite;
+    canReview = !!completed;
+    existingReview = review;
+  }
 
   // Group availability windows by weekday
   const byDay = new Map<number, typeof doctor.availability>();
@@ -101,6 +136,13 @@ export default async function DoctorPage({ params }: Props) {
                     <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">
                       🎥 Video consultations available
                     </span>
+                  )}
+                  {session?.role === "PATIENT" && (
+                    <FavouriteButton
+                      doctorId={doctor.id}
+                      path={`/doctor/${doctor.id}`}
+                      filled={isFavourite}
+                    />
                   )}
                 </div>
               </div>
@@ -187,6 +229,30 @@ export default async function DoctorPage({ params }: Props) {
             <h2 className="text-xl font-bold text-slate-900">
               Patient reviews ({doctor.reviews.length})
             </h2>
+
+            {reviewed === "1" && (
+              <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
+                🙏 Thank you! Your review was submitted and will appear once approved.
+              </p>
+            )}
+
+            {/* Review form for eligible patients */}
+            {session?.role === "PATIENT" && canReview && (
+              <div className="mt-4">
+                <ReviewForm
+                  doctorId={doctor.id}
+                  existingRating={existingReview?.rating}
+                  existingComment={existingReview?.comment}
+                />
+              </div>
+            )}
+            {session?.role === "PATIENT" && !canReview && (
+              <p className="mt-3 rounded-lg bg-slate-50 px-4 py-2.5 text-sm text-slate-500">
+                💡 You can review this doctor after completing an appointment with
+                them.
+              </p>
+            )}
+
             <div className="mt-4 space-y-4">
               {doctor.reviews.map((review) => (
                 <div
