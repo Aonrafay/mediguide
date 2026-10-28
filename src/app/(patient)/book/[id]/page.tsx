@@ -5,6 +5,7 @@ import { Avatar } from "@/components/patient/cards";
 import BookingWidget from "@/components/patient/BookingWidget";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getI18n, loadContentTranslator } from "@/lib/i18n/server";
 
 export const metadata = { title: "Book Appointment" };
 export const instant = false;
@@ -13,7 +14,17 @@ type Props = PageProps<"/book/[id]">;
 
 export default async function BookPage({ params, searchParams }: Props) {
   const { id } = await params;
-  const { error, date, mode } = await searchParams;
+  const { locale, t } = await getI18n();
+  const tr = await loadContentTranslator(locale, [
+    "Country",
+    "City",
+    "Facility",
+    "Specialty",
+  ]);
+  const sp = await searchParams;
+  const error = typeof sp.error === "string" ? sp.error : undefined;
+  const date = typeof sp.date === "string" ? sp.date : undefined;
+  const mode = typeof sp.mode === "string" ? sp.mode : undefined;
 
   const doctor = await db.doctor.findUnique({
     where: { id },
@@ -53,13 +64,23 @@ export default async function BookPage({ params, searchParams }: Props) {
       <div className="mt-4 flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5">
         <Avatar name={doctor.name} />
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Book — {doctor.name}</h1>
+          <h1 className="text-xl font-bold text-slate-900">
+            {t("book.pageTitle", { name: doctor.name })}
+          </h1>
           <p className="text-sm text-slate-500">
-            {doctor.specialty.icon} {doctor.specialty.name} · {doctor.qualification}
+            {doctor.specialty.icon}{" "}
+            {tr("Specialty", doctor.specialtyId, "name", doctor.specialty.name)} ·{" "}
+            {doctor.qualification}
           </p>
           <p className="text-xs text-slate-400">
-            {doctor.facility.name}, {doctor.facility.city.name},{" "}
-            {doctor.facility.city.country.name}
+            {tr("Facility", doctor.facilityId, "name", doctor.facility.name)},{" "}
+            {tr("City", doctor.facility.cityId, "name", doctor.facility.city.name)},{" "}
+            {tr(
+              "Country",
+              doctor.facility.city.countryId,
+              "name",
+              doctor.facility.city.country.name
+            )}
           </p>
         </div>
       </div>
@@ -73,9 +94,23 @@ export default async function BookPage({ params, searchParams }: Props) {
           videoFee={doctor.videoFee}
           isLoggedIn={session?.role === "PATIENT"}
           modeDays={modeDays}
-          initialError={typeof error === "string" ? error : undefined}
-          initialDate={typeof date === "string" ? date : undefined}
-          initialMode={typeof mode === "string" ? mode : undefined}
+          initialError={error}
+          initialDate={date}
+          initialMode={mode}
+          labels={{
+            pickDate: t("bw.pickDate"),
+            times: t("bw.times"),
+            notes: t("bw.notes"),
+            confirm: t("bw.confirm"),
+            signIn: t("bw.signIn"),
+            noTimingsInPerson: t("bw.noTimingsInPerson"),
+            noTimingsVideo: t("bw.noTimingsVideo"),
+            allBooked: t("bw.allBooked"),
+            pickFirst: t("bw.pickFirst"),
+            modeInPerson: t("bw.modeInPerson"),
+            modeVideo: t("bw.modeVideo"),
+            notAvailable: t("bw.notAvailable"),
+          }}
         />
       </div>
     </main>

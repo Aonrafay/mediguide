@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { FacilityCard } from "@/components/patient/cards";
 import { db } from "@/lib/db";
 import { flagEmoji, slugify } from "@/lib/slugs";
+import { getI18n, loadContentTranslator } from "@/lib/i18n/server";
 
 export const instant = false;
 
@@ -26,6 +27,13 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function CityPage({ params }: Props) {
   const { countryCode, citySlug } = await params;
+  const { locale, t } = await getI18n();
+  const tr = await loadContentTranslator(locale, [
+    "Country",
+    "City",
+    "Facility",
+    "FacilityType",
+  ]);
 
   const country = await db.country.findFirst({
     where: { code: countryCode.toUpperCase(), isActive: true },
@@ -43,6 +51,9 @@ export default async function CityPage({ params }: Props) {
   })).find((c) => slugify(c.name) === citySlug);
   if (!city) notFound();
 
+  const countryName = tr("Country", country.id, "name", country.name);
+  const cityName = tr("City", city.id, "name", city.name);
+
   // Facilities grouped by facility type
   const typeCounts = new Map<string, number>();
   for (const facility of city.facilities) {
@@ -50,54 +61,63 @@ export default async function CityPage({ params }: Props) {
   }
   const types = await db.facilityType.findMany({ orderBy: { name: "asc" } });
   const availableTypes = types
-    .map((type) => ({ type, count: typeCounts.get(type.id) ?? 0 }))
+    .map((type) => ({
+      type,
+      name: tr("FacilityType", type.id, "name", type.name),
+      count: typeCounts.get(type.id) ?? 0,
+    }))
     .filter((entry) => entry.count > 0);
+
+  const totalDoctors = city.facilities.reduce(
+    (sum, f) => sum + f._count.doctors,
+    0
+  );
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
       {/* Breadcrumb */}
       <nav className="text-sm text-slate-500">
         <Link href="/" className="hover:text-teal-700">
-          Home
+          {t("common.home")}
         </Link>{" "}
         /{" "}
         <Link
           href={`/c/${country.code.toLowerCase()}`}
           className="hover:text-teal-700"
         >
-          {country.name}
+          {countryName}
         </Link>{" "}
-        / <span className="text-slate-700">{city.name}</span>
+        / <span className="text-slate-700">{cityName}</span>
       </nav>
 
       <header className="mt-4">
         <h1 className="text-3xl font-bold text-slate-900">
-          {flagEmoji(country.code)} Healthcare in {city.name}
+          {flagEmoji(country.code)} Healthcare in {cityName}
         </h1>
         <p className="mt-1 text-slate-500">
-          {city.facilities.length} facilities ·{" "}
-          {city.facilities.reduce((sum, f) => sum + f._count.doctors, 0)} doctors
+          {t("cty.facilitiesIn", { n: city.facilities.length })} ·{" "}
+          {t("cty.doctorsCount", { n: totalDoctors })}
         </p>
       </header>
 
       {/* Facility type filter cards */}
       <section className="mt-8">
-        <h2 className="text-xl font-bold text-slate-900">Browse by facility type</h2>
+        <h2 className="text-xl font-bold text-slate-900">{t("cty.browseType")}</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {availableTypes.map(({ type, count }) => (
+          {availableTypes.map(({ type, name, count }) => (
             <Link
               key={type.id}
               href={`/c/${country.code.toLowerCase()}/${slugify(city.name)}/${slugify(type.name)}`}
               className="rounded-2xl border border-slate-200 bg-white p-5 text-center transition hover:border-teal-300 hover:shadow-md"
             >
               <p className="text-4xl">{type.icon ?? "🏢"}</p>
-              <p className="mt-2 font-bold text-slate-900">{type.name}</p>
-              <p className="text-sm text-slate-500">{count} available</p>
+              <p className="mt-2 font-bold text-slate-900">{name}</p>
+              <p className="text-sm text-slate-500">{t("cty.available", { n: count })}</p>
             </Link>
           ))}
           {availableTypes.length === 0 && (
             <p className="text-slate-400">
-              No facilities added in {city.name} yet.
+              {t("cty.noFacilities", { city: cityName })}
             </p>
           )}
         </div>
@@ -106,17 +126,26 @@ export default async function CityPage({ params }: Props) {
       {/* All facilities */}
       {city.facilities.length > 0 && (
         <section className="mt-10">
-          <h2 className="text-xl font-bold text-slate-900">All facilities</h2>
+          <h2 className="text-xl font-bold text-slate-900">{t("cty.allFacilities")}</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {city.facilities.map((facility) => (
               <FacilityCard
                 key={facility.id}
                 facility={{
                   ...facility,
-                  city: {
-                    name: city.name,
-                    country: { name: country.name, code: country.code },
+                  name: tr("Facility", facility.id, "name", facility.name),
+                  type: {
+                    ...facility.type,
+                    name: tr("FacilityType", facility.typeId, "name", facility.type.name),
                   },
+                  city: {
+                    name: cityName,
+                    country: { name: countryName, code: country.code },
+                  },
+                }}
+                labels={{
+                  verified: t("facility.verified"),
+                  doctors: (n) => t("card.doctors", { n }),
                 }}
               />
             ))}

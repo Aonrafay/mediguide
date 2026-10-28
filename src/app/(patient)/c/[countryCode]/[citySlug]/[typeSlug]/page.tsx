@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 
 import { FacilityCard } from "@/components/patient/cards";
 import { db } from "@/lib/db";
-import { flagEmoji, slugify } from "@/lib/slugs";
+import { slugify } from "@/lib/slugs";
+import { getI18n, loadContentTranslator } from "@/lib/i18n/server";
 
 export const instant = false;
 
@@ -20,6 +21,13 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function FacilityTypeListingPage({ params }: Props) {
   const { countryCode, citySlug, typeSlug } = await params;
+  const { locale, t } = await getI18n();
+  const tr = await loadContentTranslator(locale, [
+    "Country",
+    "City",
+    "Facility",
+    "FacilityType",
+  ]);
 
   const country = await db.country.findFirst({
     where: { code: countryCode.toUpperCase(), isActive: true },
@@ -32,8 +40,12 @@ export default async function FacilityTypeListingPage({ params }: Props) {
   if (!city) notFound();
 
   const types = await db.facilityType.findMany();
-  const type = types.find((t) => slugify(t.name) === typeSlug);
+  const type = types.find((t2) => slugify(t2.name) === typeSlug);
   if (!type) notFound();
+
+  const countryName = tr("Country", country.id, "name", country.name);
+  const cityName = tr("City", city.id, "name", city.name);
+  const typeName = tr("FacilityType", type.id, "name", type.name);
 
   const facilities = await db.facility.findMany({
     where: { cityId: city.id, typeId: type.id, isActive: true },
@@ -50,41 +62,56 @@ export default async function FacilityTypeListingPage({ params }: Props) {
       {/* Breadcrumb */}
       <nav className="text-sm text-slate-500">
         <Link href="/" className="hover:text-teal-700">
-          Home
+          {t("common.home")}
         </Link>{" "}
         /{" "}
         <Link
           href={`/c/${country.code.toLowerCase()}`}
           className="hover:text-teal-700"
         >
-          {country.name}
+          {countryName}
         </Link>{" "}
         /{" "}
         <Link
           href={`/c/${country.code.toLowerCase()}/${slugify(city.name)}`}
           className="hover:text-teal-700"
         >
-          {city.name}
+          {cityName}
         </Link>{" "}
-        / <span className="text-slate-700">{type.name}</span>
+        / <span className="text-slate-700">{typeName}</span>
       </nav>
 
       <header className="mt-4">
         <h1 className="text-3xl font-bold text-slate-900">
-          {type.icon} {type.name}s in {city.name}
+          {type.icon} {t("tpage.title", { type: typeName, city: cityName })}
         </h1>
         <p className="mt-1 text-slate-500">
-          {facilities.length} {facilities.length === 1 ? "facility" : "facilities"} found
+          {t("tpage.found", { n: facilities.length, type: typeName })}
         </p>
       </header>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {facilities.map((facility) => (
-          <FacilityCard key={facility.id} facility={facility} />
+          <FacilityCard
+            key={facility.id}
+            facility={{
+              ...facility,
+              name: tr("Facility", facility.id, "name", facility.name),
+              type: { ...facility.type, name: typeName },
+              city: {
+                name: cityName,
+                country: { name: countryName, code: country.code },
+              },
+            }}
+            labels={{
+              verified: t("facility.verified"),
+              doctors: (n) => t("card.doctors", { n }),
+            }}
+          />
         ))}
         {facilities.length === 0 && (
           <p className="text-slate-400">
-            No {type.name.toLowerCase()}s in {city.name} yet.
+            {t("tpage.none", { type: typeName, city: cityName })}
           </p>
         )}
       </div>

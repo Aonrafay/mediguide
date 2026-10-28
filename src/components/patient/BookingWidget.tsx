@@ -7,8 +7,8 @@ import { bookAppointment } from "@/lib/actions/booking";
 import { formatFee } from "@/lib/utils";
 
 const MODES = [
-  { value: "IN_PERSON", label: "🏥 In-Person Visit" },
-  { value: "VIDEO", label: "🎥 Video Consultation" },
+  { value: "IN_PERSON", key: "modeInPerson" as const },
+  { value: "VIDEO", key: "modeVideo" as const },
 ] as const;
 
 type Mode = (typeof MODES)[number]["value"];
@@ -34,6 +34,40 @@ function monthLabel(dateStr: string) {
   return date.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
 }
 
+export type BookingLabels = {
+  pickDate: string;
+  times: string;
+  notes: string;
+  confirm: string;
+  booking?: string;
+  signIn: string;
+  noTimingsInPerson: string;
+  noTimingsVideo: string;
+  allBooked: string;
+  pickFirst: string;
+  modeInPerson: string;
+  modeVideo: string;
+  notAvailable: string;
+};
+
+const DEFAULT_LABELS: BookingLabels = {
+  pickDate: "Pick a date",
+  times: "Available times",
+  notes: "Notes for the doctor (optional) — symptoms, questions…",
+  confirm: "Confirm booking",
+  booking: "Booking…",
+  signIn: "Sign in to book",
+  noTimingsInPerson:
+    "The doctor has no in-person timings on this day — try another date or mode.",
+  noTimingsVideo:
+    "The doctor has no video timings on this day — try another date or mode.",
+  allBooked: "All slots are booked on this day.",
+  pickFirst: "Pick a date first.",
+  modeInPerson: "🏥 In-Person Visit",
+  modeVideo: "🎥 Video Consultation",
+  notAvailable: "Not available",
+};
+
 export default function BookingWidget({
   doctorId,
   offersVideo,
@@ -45,6 +79,7 @@ export default function BookingWidget({
   initialError,
   initialDate,
   initialMode,
+  labels: labelsProp,
 }: {
   doctorId: string;
   offersVideo: boolean;
@@ -55,7 +90,9 @@ export default function BookingWidget({
   initialError?: string;
   initialDate?: string;
   initialMode?: string;
+  labels?: Partial<BookingLabels>;
 }) {
+  const labels = { ...DEFAULT_LABELS, ...labelsProp };
   const [mode, setMode] = useState<Mode>(
     initialMode === "VIDEO" && offersVideo ? "VIDEO" : "IN_PERSON"
   );
@@ -148,12 +185,12 @@ export default function BookingWidget({
                     : "border-slate-200 bg-white text-slate-600 hover:border-teal-300"
               }`}
             >
-              <span>{m.label}</span>
+              <span>{labels[m.key]}</span>
               <span className="block text-xs text-slate-500">
                 {m.value === "IN_PERSON"
                   ? formatFee(inPersonFee)
                   : disabled
-                    ? "Not available"
+                    ? labels.notAvailable
                     : formatFee(videoFee)}
               </span>
             </button>
@@ -163,7 +200,7 @@ export default function BookingWidget({
 
       {/* Date chips */}
       <div>
-        <p className="text-sm font-medium text-slate-700">Pick a date</p>
+        <p className="text-sm font-medium text-slate-700">{labels.pickDate}</p>
         <div className="mt-2 flex gap-2 overflow-x-auto pb-2">
           {dates.length === 0 && (
             <div className="h-16 w-full animate-pulse rounded-lg bg-slate-100" />
@@ -200,13 +237,12 @@ export default function BookingWidget({
 
       {/* Slots */}
       <div>
-        <p className="text-sm font-medium text-slate-700">Available times</p>
+        <p className="text-sm font-medium text-slate-700">{labels.times}</p>
         {!date ? (
-          <p className="mt-2 text-sm text-slate-400">Pick a date first.</p>
+          <p className="mt-2 text-sm text-slate-400">{labels.pickFirst}</p>
         ) : !dateSupported ? (
           <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
-            The doctor has no {mode === "VIDEO" ? "video" : "in-person"} timings on
-            this day — try another date or mode.
+            {mode === "VIDEO" ? labels.noTimingsVideo : labels.noTimingsInPerson}
           </p>
         ) : slotsLoading ? (
           <div className="mt-2 h-10 w-full animate-pulse rounded-lg bg-slate-100" />
@@ -229,7 +265,7 @@ export default function BookingWidget({
           </div>
         ) : (
           <p className="mt-2 text-sm text-slate-400">
-            {loadError ?? "All slots are booked on this day."}
+            {loadError ?? labels.allBooked}
           </p>
         )}
       </div>
@@ -238,7 +274,7 @@ export default function BookingWidget({
       <textarea
         name="notes"
         rows={2}
-        placeholder="Notes for the doctor (optional) — symptoms, questions…"
+        placeholder={labels.notes}
         className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
       />
 
@@ -250,20 +286,23 @@ export default function BookingWidget({
       )}
 
       {isLoggedIn ? (
-        <SubmitBooking />
+        <SubmitBooking
+          label={labels.confirm}
+          pendingLabel={labels.booking ?? labels.confirm}
+        />
       ) : (
         <a
           href={`/login?next=/book/${doctorId}`}
           className="block w-full rounded-xl bg-teal-600 px-4 py-3 text-center font-semibold text-white transition hover:bg-teal-700"
         >
-          Sign in to book
+          {labels.signIn}
         </a>
       )}
     </form>
   );
 }
 
-function SubmitBooking() {
+function SubmitBooking({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
   return (
     <button
@@ -271,7 +310,7 @@ function SubmitBooking() {
       disabled={pending}
       className="w-full rounded-xl bg-teal-600 px-4 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:opacity-50"
     >
-      {pending ? "Booking…" : "Confirm booking"}
+      {pending ? pendingLabel : label}
     </button>
   );
 }

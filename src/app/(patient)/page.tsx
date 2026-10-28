@@ -3,10 +3,14 @@ import Link from "next/link";
 import { DoctorCard } from "@/components/patient/cards";
 import { db } from "@/lib/db";
 import { flagEmoji } from "@/lib/slugs";
+import { getI18n, loadContentTranslator } from "@/lib/i18n/server";
 
 export const instant = false;
 
 export default async function HomePage() {
+  const { locale, t } = await getI18n();
+  const tr = await loadContentTranslator(locale, ["Country", "Specialty"]);
+
   const [countries, stats, featuredDoctors] = await Promise.all([
     db.country.findMany({
       where: { isActive: true },
@@ -62,36 +66,34 @@ export default async function HomePage() {
       <section className="bg-gradient-to-b from-teal-700 to-teal-600 text-white">
         <div className="mx-auto max-w-6xl px-4 py-20 text-center">
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            Find the right care, anywhere
+            {t("home.heroTitle")}
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-teal-50">
-            Browse hospitals, clinics, medical complexes and labs across countries
-            and cities — explore doctor profiles and book in-person or video
-            consultations.
+            {t("home.heroSub")}
           </p>
 
           {/* Big search */}
           <form action="/doctors" className="mx-auto mt-8 flex max-w-xl gap-2">
             <input
               name="q"
-              placeholder="Search a doctor, specialty… e.g. Cardiology"
+              placeholder={t("home.searchPlaceholder")}
               className="w-full rounded-xl px-4 py-3 text-slate-900 shadow-lg outline-none focus:ring-2 focus:ring-teal-300"
             />
             <button
               type="submit"
               className="rounded-xl bg-slate-900 px-6 py-3 font-semibold shadow-lg transition hover:bg-slate-800"
             >
-              Search
+              {t("home.search")}
             </button>
           </form>
 
           {/* Live stats */}
           <div className="mx-auto mt-10 flex max-w-2xl flex-wrap justify-center gap-x-10 gap-y-4 text-center">
             {[
-              { label: "Countries", value: countryCount },
-              { label: "Cities", value: cityCount },
-              { label: "Facilities", value: facilityCount },
-              { label: "Doctors", value: doctorCount },
+              { label: t("stat.countries"), value: countryCount },
+              { label: t("stat.cities"), value: cityCount },
+              { label: t("stat.facilities"), value: facilityCount },
+              { label: t("stat.doctors"), value: doctorCount },
             ].map((s) => (
               <div key={s.label}>
                 <p className="text-3xl font-bold">{s.value}</p>
@@ -104,10 +106,8 @@ export default async function HomePage() {
 
       {/* Browse by country */}
       <section className="mx-auto max-w-6xl px-4 py-14">
-        <h2 className="text-2xl font-bold text-slate-900">Browse by country</h2>
-        <p className="mt-1 text-slate-500">
-          Choose a country, then a city, then the type of care you need.
-        </p>
+        <h2 className="text-2xl font-bold text-slate-900">{t("home.browseTitle")}</h2>
+        <p className="mt-1 text-slate-500">{t("home.browseSub")}</p>
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {countries.map((country) => (
             <Link
@@ -117,13 +117,16 @@ export default async function HomePage() {
             >
               <span className="text-4xl">{flagEmoji(country.code)}</span>
               <div>
-                <p className="font-bold text-slate-900">{country.name}</p>
+                <p className="font-bold text-slate-900">
+                  {tr("Country", country.id, "name", country.name)}
+                </p>
                 <p className="text-sm text-slate-500">
-                  {country._count.cities} cities ·{" "}
-                  {facilitiesByCountry.get(country.id) ?? 0} facilities
+                  {t("cty.citiesIn", { n: country._count.cities }).split("—")[0]!.trim()}{" "}
+                  · {facilitiesByCountry.get(country.id) ?? 0}{" "}
+                  {t("stat.facilities").toLowerCase()}
                 </p>
               </div>
-              <span className="ml-auto text-slate-300">→</span>
+              <span className="ms-auto text-slate-300">→</span>
             </Link>
           ))}
         </div>
@@ -133,24 +136,24 @@ export default async function HomePage() {
       <section className="bg-white py-14">
         <div className="mx-auto max-w-6xl px-4">
           <h2 className="text-center text-2xl font-bold text-slate-900">
-            How MediGuide works
+            {t("home.howTitle")}
           </h2>
           <div className="mt-8 grid gap-6 sm:grid-cols-3">
             {[
               {
                 icon: "🌍",
-                title: "1. Choose your location",
-                text: "Pick your country and city — MediGuide narrows everything down for you.",
+                title: t("home.s1t"),
+                text: t("home.s1d"),
               },
               {
                 icon: "🏥",
-                title: "2. Pick a facility",
-                text: "Compare hospitals, clinics, medical complexes and labs near you.",
+                title: t("home.s2t"),
+                text: t("home.s2d"),
               },
               {
                 icon: "🩺",
-                title: "3. Meet your doctor",
-                text: "View profiles, check fees & timings, then book in-person or by video.",
+                title: t("home.s3t"),
+                text: t("home.s3d"),
               },
             ].map((step) => (
               <div
@@ -172,22 +175,35 @@ export default async function HomePage() {
           <div className="flex items-end justify-between">
             <div>
               <h2 className="text-2xl font-bold text-slate-900">
-                Featured doctors
+                {t("home.featuredTitle")}
               </h2>
-              <p className="mt-1 text-slate-500">
-                Offering video consultations 🎥
-              </p>
+              <p className="mt-1 text-slate-500">{t("home.featuredSub")}</p>
             </div>
             <Link
               href="/doctors"
               className="text-sm font-semibold text-teal-700 hover:underline"
             >
-              View all →
+              {t("home.viewAll")}
             </Link>
           </div>
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             {featuredDoctors.map((doctor) => (
-              <DoctorCard key={doctor.id} doctor={doctor} />
+              <DoctorCard
+                key={doctor.id}
+                doctor={{
+                  ...doctor,
+                  specialty: {
+                    ...doctor.specialty,
+                    name: tr("Specialty", doctor.specialty.id, "name", doctor.specialty.name),
+                  },
+                }}
+                labels={{
+                  video: t("card.video"),
+                  yrs: (n) => t("card.yrs", { n }),
+                  reviews: (n) => `(${n})`,
+                  newLabel: t("card.new"),
+                }}
+              />
             ))}
           </div>
         </section>

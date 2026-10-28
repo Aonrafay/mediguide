@@ -29,6 +29,13 @@ export function Avatar({ name, size = "h-14 w-14 text-lg" }: { name: string; siz
 
 /* ---------------------------- DoctorCard --------------------------------- */
 
+export type DoctorCardLabels = {
+  video?: string;
+  yrs?: (n: number) => string;
+  reviews?: (n: number) => string;
+  newLabel?: string;
+};
+
 export type DoctorCardData = {
   id: string;
   name: string;
@@ -47,7 +54,18 @@ export type DoctorCardData = {
   };
 };
 
-export function DoctorCard({ doctor }: { doctor: DoctorCardData }) {
+export function DoctorCard({
+  doctor,
+  labels,
+}: {
+  doctor: DoctorCardData;
+  labels?: DoctorCardLabels;
+}) {
+  const video = labels?.video ?? "🎥 Video";
+  const yrs = labels?.yrs ?? ((n: number) => `${n} yrs exp`);
+  const reviewsCount = labels?.reviews ?? ((n: number) => `(${n})`);
+  const newLabel = labels?.newLabel ?? "New on MediGuide";
+
   return (
     <Link
       href={`/doctor/${doctor.id}`}
@@ -59,7 +77,7 @@ export function DoctorCard({ doctor }: { doctor: DoctorCardData }) {
           <h3 className="font-bold text-slate-900">{doctor.name}</h3>
           {doctor.offersVideo && (
             <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
-              🎥 Video
+              {video}
             </span>
           )}
         </div>
@@ -77,14 +95,16 @@ export function DoctorCard({ doctor }: { doctor: DoctorCardData }) {
           {doctor.videoFee != null && (
             <span className="text-slate-500">🎥 {formatFee(doctor.videoFee)}</span>
           )}
-          <span className="text-slate-500">{doctor.experienceYears} yrs exp</span>
+          <span className="text-slate-500">{yrs(doctor.experienceYears)}</span>
           {doctor.reviewCount > 0 ? (
             <span className="flex items-center gap-1">
               <Stars rating={doctor.rating} />
-              <span className="text-xs text-slate-400">({doctor.reviewCount})</span>
+              <span className="text-xs text-slate-400">
+                {reviewsCount(doctor.reviewCount)}
+              </span>
             </span>
           ) : (
-            <span className="text-xs text-slate-400">New on MediGuide</span>
+            <span className="text-xs text-slate-400">{newLabel}</span>
           )}
         </div>
       </div>
@@ -93,6 +113,11 @@ export function DoctorCard({ doctor }: { doctor: DoctorCardData }) {
 }
 
 /* ---------------------------- FacilityCard -------------------------------- */
+
+export type FacilityCardLabels = {
+  verified?: string;
+  doctors?: (n: number) => string;
+};
 
 export type FacilityCardData = {
   id: string;
@@ -104,7 +129,16 @@ export type FacilityCardData = {
   _count?: { doctors: number };
 };
 
-export function FacilityCard({ facility }: { facility: FacilityCardData }) {
+export function FacilityCard({
+  facility,
+  labels,
+}: {
+  facility: FacilityCardData;
+  labels?: FacilityCardLabels;
+}) {
+  const verified = labels?.verified ?? "✓ Verified";
+  const doctorsCount = labels?.doctors ?? ((n: number) => `👨‍⚕️ ${n} doctors`);
+
   return (
     <Link
       href={`/facility/${facility.id}`}
@@ -114,7 +148,7 @@ export function FacilityCard({ facility }: { facility: FacilityCardData }) {
         <span className="text-3xl">{facility.type.icon ?? "🏢"}</span>
         {facility.isVerified && (
           <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
-            ✓ Verified
+            {verified}
           </span>
         )}
       </div>
@@ -125,7 +159,7 @@ export function FacilityCard({ facility }: { facility: FacilityCardData }) {
         <span>
           📍 {facility.city.name}, {facility.city.country.name}
         </span>
-        <span>👨‍⚕️ {facility._count?.doctors ?? 0} doctors</span>
+        <span>{doctorsCount(facility._count?.doctors ?? 0)}</span>
       </div>
     </Link>
   );

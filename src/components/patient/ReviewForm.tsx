@@ -6,15 +6,40 @@ import { submitReview, type ReviewState } from "@/lib/actions/engagement";
 
 const LABELS = ["", "Poor", "Fair", "Good", "Very good", "Excellent"] as const;
 
+export type ReviewLabels = {
+  title: string;
+  updateTitle: string;
+  note: string;
+  placeholder: string;
+  submit: string;
+  updateSubmit: string;
+  saving: string;
+  scale: [string, string, string, string, string, string];
+};
+
+const DEFAULT_LABELS: ReviewLabels = {
+  title: "Leave a review",
+  updateTitle: "Update your review",
+  note: "Reviews appear publicly after admin approval.",
+  placeholder: "How was your experience? (optional)",
+  submit: "Submit review",
+  updateSubmit: "Update review",
+  saving: "Saving…",
+  scale: ["", "Poor", "Fair", "Good", "Very good", "Excellent"],
+};
+
 export default function ReviewForm({
   doctorId,
   existingRating,
   existingComment,
+  labels: labelsProp,
 }: {
   doctorId: string;
   existingRating?: number;
   existingComment?: string | null;
+  labels?: Partial<ReviewLabels>;
 }) {
+  const labels = { ...DEFAULT_LABELS, ...labelsProp };
   const [rating, setRating] = useState(existingRating ?? 0);
   const [hover, setHover] = useState(0);
   const [state, formAction, isPending] = useActionState<ReviewState, FormData>(
@@ -30,11 +55,9 @@ export default function ReviewForm({
       <input type="hidden" name="rating" value={rating} />
 
       <p className="font-semibold text-slate-900">
-        {existingRating ? "Update your review" : "Leave a review"}
+        {existingRating ? labels.updateTitle : labels.title}
       </p>
-      <p className="mt-1 text-xs text-slate-400">
-        Reviews appear publicly after admin approval.
-      </p>
+      <p className="mt-1 text-xs text-slate-400">{labels.note}</p>
 
       {/* Star picker */}
       <div className="mt-3 flex items-center gap-2">
@@ -55,7 +78,9 @@ export default function ReviewForm({
           ))}
         </div>
         {shown > 0 && (
-          <span className="text-sm font-medium text-slate-600">{LABELS[shown]}</span>
+          <span className="text-sm font-medium text-slate-600">
+            {labels.scale[shown]}
+          </span>
         )}
       </div>
 
@@ -63,7 +88,7 @@ export default function ReviewForm({
         name="comment"
         rows={3}
         defaultValue={existingComment ?? ""}
-        placeholder="How was your experience? (optional)"
+        placeholder={labels.placeholder}
         className="mt-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
       />
 
@@ -78,7 +103,11 @@ export default function ReviewForm({
         disabled={rating === 0 || isPending}
         className="mt-3 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:opacity-50"
       >
-        {isPending ? "Saving…" : existingRating ? "Update review" : "Submit review"}
+        {isPending
+          ? labels.saving
+          : existingRating
+            ? labels.updateSubmit
+            : labels.submit}
       </button>
     </form>
   );

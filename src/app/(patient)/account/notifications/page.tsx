@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { markAllNotificationsRead } from "@/lib/actions/engagement";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getI18n } from "@/lib/i18n/server";
 
 export const metadata = { title: "Notifications" };
 export const instant = false;
@@ -11,6 +12,8 @@ export const instant = false;
 export default async function NotificationsPage() {
   const session = await getSession();
   if (!session) redirect("/login?next=/account/notifications");
+
+  const { t } = await getI18n();
 
   const notifications = await db.notification.findMany({
     where: { userId: session.userId },
@@ -23,15 +26,15 @@ export default async function NotificationsPage() {
     <main className="mx-auto max-w-2xl px-4 py-10">
       <nav className="text-sm text-slate-500">
         <Link href="/account" className="hover:text-teal-700">
-          ← My Appointments
+          {t("notif.back")}
         </Link>
       </nav>
 
       <header className="mt-4 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Notifications</h1>
+          <h1 className="text-3xl font-bold text-slate-900">{t("notif.title")}</h1>
           <p className="mt-1 text-slate-500">
-            {unread > 0 ? `${unread} unread` : "All caught up ✅"}
+            {unread > 0 ? t("notif.unread", { n: unread }) : t("notif.allCaughtUp")}
           </p>
         </div>
         {unread > 0 && (
@@ -40,7 +43,7 @@ export default async function NotificationsPage() {
               type="submit"
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
             >
-              Mark all read
+              {t("notif.markAll")}
             </button>
           </form>
         )}
@@ -75,7 +78,7 @@ export default async function NotificationsPage() {
         ))}
         {notifications.length === 0 && (
           <p className="rounded-2xl border border-dashed border-slate-300 p-10 text-center text-slate-400">
-            No notifications yet — book an appointment to get started.
+            {t("notif.none")}
           </p>
         )}
       </div>

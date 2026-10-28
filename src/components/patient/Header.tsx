@@ -1,27 +1,14 @@
 import Link from "next/link";
 
+import LanguageSwitcher from "@/components/patient/LanguageSwitcher";
 import { logout } from "@/lib/actions/auth";
 import { getSession } from "@/lib/auth";
-import { unreadNotificationCount } from "@/lib/notifications";
-
-/** Language switcher — functional in Phase 6 (multi-language). */
-function LanguageChip() {
-  return (
-    <span
-      title="Language switcher arrives in Phase 6"
-      className="hidden cursor-not-allowed items-center gap-1 rounded-full border border-slate-200 px-3 py-1.5 text-sm text-slate-400 sm:inline-flex"
-    >
-      🌐 EN
-    </span>
-  );
-}
+import { getI18n, activeLanguages } from "@/lib/i18n/server";
 
 export default async function PatientHeader() {
+  const { locale, t } = await getI18n();
   const session = await getSession();
-  const unread =
-    session && session.role === "PATIENT"
-      ? await unreadNotificationCount(session.userId)
-      : 0;
+  const languages = await activeLanguages();
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
@@ -32,23 +19,23 @@ export default async function PatientHeader() {
         </Link>
 
         {/* Global search — lands on the doctors directory */}
-        <form action="/doctors" className="ml-auto hidden max-w-sm flex-1 sm:block">
+        <form action="/doctors" className="ms-auto hidden max-w-sm flex-1 sm:block">
           <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-1.5 focus-within:border-teal-400 focus-within:bg-white">
             <span className="text-slate-400">🔍</span>
             <input
               name="q"
-              placeholder="Search doctors, specialties…"
+              placeholder={t("nav.searchPlaceholder")}
               className="w-full bg-transparent text-sm outline-none"
             />
           </div>
         </form>
 
-        <nav className="ml-auto flex items-center gap-2 text-sm sm:ml-0">
+        <nav className="ms-auto flex items-center gap-2 text-sm sm:ms-0">
           <Link
             href="/doctors"
             className="rounded-full px-3 py-1.5 font-medium text-slate-600 transition hover:bg-slate-100"
           >
-            Find Doctors
+            {t("nav.findDoctors")}
           </Link>
           {session?.role === "PATIENT" && (
             <>
@@ -56,23 +43,18 @@ export default async function PatientHeader() {
                 href="/account"
                 className="rounded-full px-3 py-1.5 font-medium text-slate-600 transition hover:bg-slate-100"
               >
-                My Appointments
+                {t("nav.myAppointments")}
               </Link>
               <Link
                 href="/account/notifications"
-                title="Notifications"
+                title={t("notif.title")}
                 className="relative rounded-full px-2.5 py-1.5 text-slate-600 transition hover:bg-slate-100"
               >
                 🔔
-                {unread > 0 && (
-                  <span className="absolute -right-0.5 top-0 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
-                    {unread > 9 ? "9+" : unread}
-                  </span>
-                )}
               </Link>
             </>
           )}
-          <LanguageChip />
+          <LanguageSwitcher languages={languages} current={locale} />
           {session ? (
             <div className="flex items-center gap-2">
               <span className="hidden rounded-full bg-teal-50 px-3 py-1.5 font-medium text-teal-700 sm:inline-block">
@@ -83,7 +65,7 @@ export default async function PatientHeader() {
                   type="submit"
                   className="rounded-full px-3 py-1.5 font-medium text-slate-500 transition hover:bg-slate-100"
                 >
-                  Sign out
+                  {t("nav.signOut")}
                 </button>
               </form>
             </div>
@@ -93,13 +75,13 @@ export default async function PatientHeader() {
                 href="/login"
                 className="rounded-full px-3 py-1.5 font-medium text-slate-600 transition hover:bg-slate-100"
               >
-                Sign in
+                {t("nav.signIn")}
               </Link>
               <Link
                 href="/register"
                 className="rounded-full bg-teal-600 px-4 py-1.5 font-semibold text-white transition hover:bg-teal-700"
               >
-                Register
+                {t("nav.register")}
               </Link>
             </>
           )}

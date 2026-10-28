@@ -12,6 +12,7 @@ import {
   type AppointmentStatus,
 } from "@/lib/constants";
 import { formatDateUTC, statusColors } from "@/lib/utils";
+import { getI18n, loadContentTranslator } from "@/lib/i18n/server";
 
 export const metadata = { title: "My Appointments" };
 export const instant = false;
@@ -27,8 +28,12 @@ type AppointmentRow = {
   doctorId: string;
   doctor: {
     name: string;
-    specialty: { name: string; icon: string | null };
-    facility: { name: string; city: { name: string } };
+    specialty: { id: string; name: string; icon: string | null };
+    facility: {
+      id: string;
+      name: string;
+      city: { id: string; name: string };
+    };
   };
 };
 
@@ -39,7 +44,10 @@ export default async function AccountPage({
   if (!session) redirect("/login?next=/account");
   if (session.role === "ADMIN") redirect("/admin");
 
-  const { booked } = await searchParams;
+  const { locale, t } = await getI18n();
+  const tr = await loadContentTranslator(locale, ["City", "Facility", "Specialty"]);
+  const sp = await searchParams;
+  const booked = sp.booked === "1";
 
   const [appointments, favourites, unreadNotifications] = await Promise.all([
     db.appointment.findMany({
@@ -66,20 +74,7 @@ export default async function AccountPage({
       },
     }),
     db.notification.count({ where: { userId: session.userId, isRead: false } }),
-  ]) as unknown as [
-    AppointmentRow[],
-    Array<{
-      doctor: {
-        id: string;
-        name: string;
-        rating: number;
-        reviewCount: number;
-        specialty: { name: string; icon: string | null };
-        facility: { name: string; city: { name: string } };
-      };
-    }>,
-    number,
-  ];
+  ]);
 
   // "Today" starts at UTC midnight — appointments today stay Upcoming all day
   const now = new Date();
@@ -97,15 +92,17 @@ export default async function AccountPage({
     <main className="mx-auto max-w-4xl px-4 py-10">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">My Appointments</h1>
-          <p className="mt-1 text-slate-500">Welcome back, {session.name}</p>
+          <h1 className="text-3xl font-bold text-slate-900">{t("acct.title")}</h1>
+          <p className="mt-1 text-slate-500">
+            {t("acct.welcome", { name: session.name })}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <Link
             href="/account/notifications"
             className="relative rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
           >
-            🔔 Notifications
+            {t("acct.notifications")}
             {unreadNotifications > 0 && (
               <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
                 {unreadNotifications}
@@ -116,33 +113,31 @@ export default async function AccountPage({
             href="/doctors"
             className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-700"
           >
-            + Book new appointment
+            {t("acct.bookNew")}
           </Link>
         </div>
       </header>
 
-      {booked === "1" && (
+      {booked && (
         <p className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          🎉 Appointment booked! You&apos;ll see it under <b>Upcoming</b> below.
-          The clinic confirms shortly — video appointments show a{" "}
-          <b>🎥 Join Call</b> button once confirmed.
+          {t("acct.booked")}
         </p>
       )}
 
       {/* Upcoming */}
       <section className="mt-8">
         <h2 className="text-xl font-bold text-slate-900">
-          Upcoming ({upcoming.length})
+          {t("acct.upcoming", { n: upcoming.length })}
         </h2>
         <div className="mt-4 space-y-4">
           {upcoming.map((appt) => (
-            <AppointmentRow key={appt.id} appt={appt} highlight />
+            <AppointmentRow key={appt.id} appt={appt} highlight t={t} tr={tr} />
           ))}
           {upcoming.length === 0 && (
             <p className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-400">
-              No upcoming appointments —{" "}
+              {t("acct.none")}{" "}
               <Link href="/doctors" className="text-teal-700 hover:underline">
-                find a doctor
+                {t("acct.findDoctor")}
               </Link>
             </p>
           )}
@@ -153,7 +148,7 @@ export default async function AccountPage({
       {favourites.length > 0 && (
         <section className="mt-10">
           <h2 className="text-xl font-bold text-slate-900">
-            ❤️ My favourite doctors ({favourites.length})
+            {t("acct.favTitle", { n: favourites.length })}
           </h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {favourites.map((fav) => (
@@ -168,8 +163,10 @@ export default async function AccountPage({
                     {fav.doctor.name}
                   </p>
                   <p className="text-xs text-slate-500">
-                    {fav.doctor.specialty.icon} {fav.doctor.specialty.name} ·{" "}
-                    {fav.doctor.facility.name}
+                    {fav.doctor.specialty.icon}{" "}
+                    {tr("Specialty", fav.doctor.specialtyId, "name", fav.doctor.specialty.name)}{" "}
+                    ·{" "}
+                    {tr("Facility", fav.doctor.facilityId, "name", fav.doctor.facility.name)}
                   </p>
                 </div>
                 {fav.doctor.reviewCount > 0 && (
@@ -184,10 +181,10 @@ export default async function AccountPage({
       {/* History */}
       {past.length > 0 && (
         <section className="mt-10">
-          <h2 className="text-xl font-bold text-slate-900">History</h2>
+          <h2 className="text-xl font-bold text-slate-900">{t("acct.history")}</h2>
           <div className="mt-4 space-y-4">
             {past.map((appt) => (
-              <AppointmentRow key={appt.id} appt={appt} />
+              <AppointmentRow key={appt.id} appt={appt} t={t} tr={tr} />
             ))}
           </div>
         </section>
@@ -201,9 +198,13 @@ export default async function AccountPage({
 function AppointmentRow({
   appt,
   highlight = false,
+  t,
+  tr,
 }: {
   appt: AppointmentRow;
   highlight?: boolean;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+  tr: (entityType: string, entityId: string, field: string, fallback: string) => string;
 }) {
   const isVideo = appt.mode === "VIDEO";
   const canCancel = appt.status === "PENDING" || appt.status === "CONFIRMED";
@@ -232,8 +233,11 @@ function AppointmentRow({
             </span>
           </div>
           <p className="mt-1 text-sm text-slate-500">
-            {appt.doctor.specialty.icon} {appt.doctor.specialty.name} ·{" "}
-            {appt.doctor.facility.name}, {appt.doctor.facility.city.name}
+            {appt.doctor.specialty.icon}{" "}
+            {tr("Specialty", appt.doctor.specialty.id, "name", appt.doctor.specialty.name)}{" "}
+            ·{" "}
+            {tr("Facility", appt.doctor.facility.id, "name", appt.doctor.facility.name)},{" "}
+            {tr("City", appt.doctor.facility.city.id, "name", appt.doctor.facility.city.name)}
           </p>
           <p className="mt-2 text-sm font-semibold text-slate-800">
             📅 {formatDateUTC(appt.date)} · 🕐 {appt.timeSlot}
@@ -251,13 +255,11 @@ function AppointmentRow({
               rel="noopener noreferrer"
               className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700"
             >
-              🎥 Join Call
+              {t("acct.joinCall")}
             </a>
           )}
           {isVideo && appt.status === "PENDING" && (
-            <p className="text-xs text-slate-400">
-              Join button activates once the clinic confirms.
-            </p>
+            <p className="text-xs text-slate-400">{t("acct.joinHint")}</p>
           )}
           {canCancel && (
             <form action={cancelAppointment}>
@@ -266,7 +268,7 @@ function AppointmentRow({
                 type="submit"
                 className="text-sm font-medium text-rose-600 hover:underline"
               >
-                Cancel appointment
+                {t("acct.cancel")}
               </button>
             </form>
           )}
@@ -274,7 +276,7 @@ function AppointmentRow({
             href={`/doctor/${appt.doctorId}`}
             className="text-sm font-medium text-teal-700 hover:underline"
           >
-            View doctor
+            {t("acct.viewDoctor")}
           </Link>
         </div>
       </div>

@@ -287,6 +287,130 @@ async function main() {
   await addReview("Dr. Sana Iqbal", 2, 5, "The video consultation was smooth and she was very attentive.");
   await addReview("Dr. Ayesha Malik", 0, 4, "Fixed my skin issue quickly. Friendly staff too.");
 
+  // ---------- Content translations (Arabic + Urdu names) ----------
+  // entityType -> entityId lookup helpers use the maps built above.
+  const countryRows = await db.country.findMany();
+  const cityRows = await db.city.findMany({ include: { country: true } });
+  const specialtyRows = await db.specialty.findMany();
+  const typeRows2 = await db.facilityType.findMany();
+
+  const translations: {
+    entityType: string;
+    match: string;
+    languageCode: string;
+    value: string;
+  }[] = [
+    // Countries (AR + UR)
+    { entityType: "Country", match: "Pakistan", languageCode: "ar", value: "باكستان" },
+    { entityType: "Country", match: "Pakistan", languageCode: "ur", value: "پاکستان" },
+    { entityType: "Country", match: "United Arab Emirates", languageCode: "ar", value: "الإمارات العربية المتحدة" },
+    { entityType: "Country", match: "United Arab Emirates", languageCode: "ur", value: "متحدہ عرب امارات" },
+    { entityType: "Country", match: "Saudi Arabia", languageCode: "ar", value: "السعودية" },
+    { entityType: "Country", match: "Saudi Arabia", languageCode: "ur", value: "سعودی عرب" },
+    { entityType: "Country", match: "Turkey", languageCode: "ar", value: "تركيا" },
+    { entityType: "Country", match: "Turkey", languageCode: "ur", value: "ترکی" },
+    { entityType: "Country", match: "Malaysia", languageCode: "ar", value: "ماليزيا" },
+    { entityType: "Country", match: "Malaysia", languageCode: "ur", value: "ملائیشیا" },
+    { entityType: "Country", match: "India", languageCode: "ar", value: "الهند" },
+    { entityType: "Country", match: "India", languageCode: "ur", value: "بھارت" },
+
+    // Facility types (AR + UR)
+    { entityType: "FacilityType", match: "Hospital", languageCode: "ar", value: "مستشفى" },
+    { entityType: "FacilityType", match: "Hospital", languageCode: "ur", value: "ہسپتال" },
+    { entityType: "FacilityType", match: "Clinic", languageCode: "ar", value: "عيادة" },
+    { entityType: "FacilityType", match: "Clinic", languageCode: "ur", value: "کلینک" },
+    { entityType: "FacilityType", match: "Medical Complex", languageCode: "ar", value: "مجمع طبي" },
+    { entityType: "FacilityType", match: "Medical Complex", languageCode: "ur", value: "میڈیکل کمپلیکس" },
+    { entityType: "FacilityType", match: "Lab", languageCode: "ar", value: "مختبر" },
+    { entityType: "FacilityType", match: "Lab", languageCode: "ur", value: "لیبارٹری" },
+
+    // Specialties (AR)
+    { entityType: "Specialty", match: "Cardiology", languageCode: "ar", value: "أمراض القلب" },
+    { entityType: "Specialty", match: "Dermatology", languageCode: "ar", value: "الجلدية" },
+    { entityType: "Specialty", match: "Dental Care", languageCode: "ar", value: "طب الأسنان" },
+    { entityType: "Specialty", match: "ENT", languageCode: "ar", value: "الأنف والأذن والحنجرة" },
+    { entityType: "Specialty", match: "General Medicine", languageCode: "ar", value: "الطب العام" },
+    { entityType: "Specialty", match: "Gynecology", languageCode: "ar", value: "النساء والتوليد" },
+    { entityType: "Specialty", match: "Neurology", languageCode: "ar", value: "الأعصاب" },
+    { entityType: "Specialty", match: "Ophthalmology", languageCode: "ar", value: "طب العيون" },
+    { entityType: "Specialty", match: "Orthopedics", languageCode: "ar", value: "العظام" },
+    { entityType: "Specialty", match: "Pediatrics", languageCode: "ar", value: "طب الأطفال" },
+
+    // Specialties (UR)
+    { entityType: "Specialty", match: "Cardiology", languageCode: "ur", value: "کارڈیالوجی" },
+    { entityType: "Specialty", match: "Dermatology", languageCode: "ur", value: "امراض جلد" },
+    { entityType: "Specialty", match: "Dental Care", languageCode: "ur", value: "ڈینٹل کیئر" },
+    { entityType: "Specialty", match: "ENT", languageCode: "ur", value: "کان ناک گلا" },
+    { entityType: "Specialty", match: "General Medicine", languageCode: "ur", value: "جنرل میڈیسن" },
+    { entityType: "Specialty", match: "Gynecology", languageCode: "ur", value: "نسائیات" },
+    { entityType: "Specialty", match: "Neurology", languageCode: "ur", value: "اعصاب" },
+    { entityType: "Specialty", match: "Ophthalmology", languageCode: "ur", value: "امراض چشم" },
+    { entityType: "Specialty", match: "Orthopedics", languageCode: "ur", value: "ہڈیاں" },
+    { entityType: "Specialty", match: "Pediatrics", languageCode: "ur", value: "امراض اطفال" },
+
+    // Cities (AR)
+    { entityType: "City", match: "Lahore", languageCode: "ar", value: "لاهور" },
+    { entityType: "City", match: "Karachi", languageCode: "ar", value: "كراچي" },
+    { entityType: "City", match: "Islamabad", languageCode: "ar", value: "إسلام آباد" },
+    { entityType: "City", match: "Multan", languageCode: "ar", value: "ملتان" },
+    { entityType: "City", match: "Dubai", languageCode: "ar", value: "دبي" },
+    { entityType: "City", match: "Abu Dhabi", languageCode: "ar", value: "أبوظبي" },
+    { entityType: "City", match: "Sharjah", languageCode: "ar", value: "الشارقة" },
+    { entityType: "City", match: "Riyadh", languageCode: "ar", value: "الرياض" },
+    { entityType: "City", match: "Jeddah", languageCode: "ar", value: "جدة" },
+    { entityType: "City", match: "Makkah", languageCode: "ar", value: "مكة" },
+    { entityType: "City", match: "Istanbul", languageCode: "ar", value: "إستنبول" },
+    { entityType: "City", match: "Ankara", languageCode: "ar", value: "أنقرة" },
+    { entityType: "City", match: "Izmir", languageCode: "ar", value: "إزمير" },
+
+    // Cities (UR)
+    { entityType: "City", match: "Lahore", languageCode: "ur", value: "لاہور" },
+    { entityType: "City", match: "Karachi", languageCode: "ur", value: "کراچی" },
+    { entityType: "City", match: "Islamabad", languageCode: "ur", value: "اسلام آباد" },
+    { entityType: "City", match: "Multan", languageCode: "ur", value: "ملتان" },
+    { entityType: "City", match: "Dubai", languageCode: "ur", value: "دبئی" },
+    { entityType: "City", match: "Abu Dhabi", languageCode: "ur", value: "ابوظہبی" },
+    { entityType: "City", match: "Sharjah", languageCode: "ur", value: "شارجہ" },
+    { entityType: "City", match: "Riyadh", languageCode: "ur", value: "ریاض" },
+    { entityType: "City", match: "Jeddah", languageCode: "ur", value: "جدہ" },
+    { entityType: "City", match: "Makkah", languageCode: "ur", value: "مکہ" },
+    { entityType: "City", match: "Istanbul", languageCode: "ur", value: "استنبول" },
+    { entityType: "City", match: "Ankara", languageCode: "ur", value: "انقرہ" },
+    { entityType: "City", match: "Izmir", languageCode: "ur", value: "ازمیر" },
+  ];
+
+  for (const entry of translations) {
+    let entityId: string | undefined;
+    if (entry.entityType === "Country")
+      entityId = countryRows.find((c) => c.name === entry.match)?.id;
+    else if (entry.entityType === "City")
+      entityId = cityRows.find((c) => c.name === entry.match)?.id;
+    else if (entry.entityType === "Specialty")
+      entityId = specialtyRows.find((s) => s.name === entry.match)?.id;
+    else if (entry.entityType === "FacilityType")
+      entityId = typeRows2.find((t) => t.name === entry.match)?.id;
+    if (!entityId) continue;
+
+    await db.contentTranslation.upsert({
+      where: {
+        entityType_entityId_languageCode_field: {
+          entityType: entry.entityType,
+          entityId,
+          languageCode: entry.languageCode,
+          field: "name",
+        },
+      },
+      update: { value: entry.value },
+      create: {
+        entityType: entry.entityType,
+        entityId,
+        languageCode: entry.languageCode,
+        field: "name",
+        value: entry.value,
+      },
+    });
+  }
+
   // ---------- Languages ----------
   const langs = [
     { code: "en", name: "English", nativeName: "English", direction: "ltr", isDefault: true },

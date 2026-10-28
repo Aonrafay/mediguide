@@ -11,7 +11,8 @@ import {
   WEEKDAYS,
 } from "@/lib/constants";
 import { formatDate, formatFee } from "@/lib/utils";
-import { flagEmoji, parseJsonArray } from "@/lib/slugs";
+import { flagEmoji, parseJsonArray, slugify } from "@/lib/slugs";
+import { getI18n, loadContentTranslator } from "@/lib/i18n/server";
 
 export const instant = false;
 
@@ -26,6 +27,15 @@ export async function generateMetadata({ params }: Props) {
 export default async function DoctorPage({ params, searchParams }: Props) {
   const { id } = await params;
   const { reviewed } = await searchParams;
+  const { locale, t } = await getI18n();
+  const tr = await loadContentTranslator(locale, [
+    "Country",
+    "City",
+    "Facility",
+    "Specialty",
+    "Doctor",
+  ]);
+
   const doctor = await db.doctor.findUnique({
     where: { id },
     include: {
@@ -45,6 +55,18 @@ export default async function DoctorPage({ params, searchParams }: Props) {
   if (!doctor || !doctor.isActive) notFound();
 
   const languages = parseJsonArray(doctor.languages);
+
+  // Translated display names
+  const specialtyName = tr("Specialty", doctor.specialtyId, "name", doctor.specialty.name);
+  const facilityName = tr("Facility", doctor.facilityId, "name", doctor.facility.name);
+  const cityName = tr("City", doctor.facility.cityId, "name", doctor.facility.city.name);
+  const countryName = tr(
+    "Country",
+    doctor.facility.city.countryId,
+    "name",
+    doctor.facility.city.country.name
+  );
+  const about = tr("Doctor", doctor.id, "about", doctor.about ?? "");
 
   // Patient-specific state: favourite flag + review eligibility
   const session = await getSession();
@@ -92,7 +114,7 @@ export default async function DoctorPage({ params, searchParams }: Props) {
       {/* Breadcrumb */}
       <nav className="text-sm text-slate-500">
         <Link href="/doctors" className="hover:text-teal-700">
-          Doctors
+          {t("nav.findDoctors")}
         </Link>{" "}
         / <span className="text-slate-700">{doctor.name}</span>
       </nav>
@@ -109,14 +131,11 @@ export default async function DoctorPage({ params, searchParams }: Props) {
                   {doctor.name}
                 </h1>
                 <p className="mt-1 text-slate-600">
-                  {doctor.specialty.icon} {doctor.specialty.name} ·{" "}
-                  {doctor.qualification}
+                  {doctor.specialty.icon} {specialtyName} · {doctor.qualification}
                 </p>
                 <p className="mt-1 text-sm text-slate-500">
-                  {doctor.experienceYears} years experience ·{" "}
-                  {doctor.facility.name}, {doctor.facility.city.name},{" "}
-                  {flagEmoji(doctor.facility.city.country.code)}{" "}
-                  {doctor.facility.city.country.name}
+                  {t("doctor.exp", { n: doctor.experienceYears })} · {facilityName},{" "}
+                  {cityName}, {flagEmoji(doctor.facility.city.country.code)} {countryName}
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
                   {doctor.reviewCount > 0 ? (
@@ -126,15 +145,15 @@ export default async function DoctorPage({ params, searchParams }: Props) {
                         {doctor.rating.toFixed(1)}
                       </span>
                       <span className="text-slate-400">
-                        ({doctor.reviewCount} review{doctor.reviewCount === 1 ? "" : "s"})
+                        ({doctor.reviewCount})
                       </span>
                     </span>
                   ) : (
-                    <span className="text-slate-400">No reviews yet</span>
+                    <span className="text-slate-400">{t("doctor.noReviewsYet")}</span>
                   )}
                   {doctor.offersVideo && (
                     <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">
-                      🎥 Video consultations available
+                      {t("doctor.videoBadge")}
                     </span>
                   )}
                   {session?.role === "PATIENT" && (
@@ -142,6 +161,7 @@ export default async function DoctorPage({ params, searchParams }: Props) {
                       doctorId={doctor.id}
                       path={`/doctor/${doctor.id}`}
                       filled={isFavourite}
+                      labels={{ on: t("fav.remove"), off: t("fav.add") }}
                     />
                   )}
                 </div>
@@ -152,7 +172,7 @@ export default async function DoctorPage({ params, searchParams }: Props) {
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  🏥 In-person visit
+                  {t("doctor.feeInPerson")}
                 </p>
                 <p className="mt-1 text-xl font-bold text-slate-900">
                   {formatFee(doctor.inPersonFee)}
@@ -164,31 +184,33 @@ export default async function DoctorPage({ params, searchParams }: Props) {
                 }`}
               >
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  🎥 Video consultation
+                  {t("doctor.feeVideo")}
                 </p>
                 <p className="mt-1 text-xl font-bold text-slate-900">
                   {doctor.videoFee != null
                     ? formatFee(doctor.videoFee)
-                    : "Not available"}
+                    : t("bw.notAvailable")}
                 </p>
               </div>
             </div>
           </section>
 
           {/* About */}
-          {doctor.about && (
+          {about && (
             <section>
-              <h2 className="text-xl font-bold text-slate-900">About</h2>
-              <p className="mt-2 leading-relaxed text-slate-600">{doctor.about}</p>
+              <h2 className="text-xl font-bold text-slate-900">{t("facility.about")}</h2>
+              <p className="mt-2 leading-relaxed text-slate-600">{about}</p>
             </section>
           )}
 
           {/* Availability */}
           <section>
-            <h2 className="text-xl font-bold text-slate-900">Availability</h2>
+            <h2 className="text-xl font-bold text-slate-900">
+              {t("doctor.availability")}
+            </h2>
             {orderedDays.length > 0 ? (
               <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                <table className="w-full text-left text-sm">
+                <table className="w-full text-start text-sm">
                   <tbody className="divide-y divide-slate-100">
                     {orderedDays.map((day) => (
                       <tr key={day}>
@@ -199,7 +221,7 @@ export default async function DoctorPage({ params, searchParams }: Props) {
                           {byDay.get(day)!.map((window) => (
                             <span
                               key={window.id}
-                              className="mr-2 inline-flex items-center gap-1"
+                              className="me-2 inline-flex items-center gap-1"
                             >
                               {window.startTime}–{window.endTime}
                               <span className="text-xs text-slate-400">
@@ -227,12 +249,12 @@ export default async function DoctorPage({ params, searchParams }: Props) {
           {/* Reviews */}
           <section>
             <h2 className="text-xl font-bold text-slate-900">
-              Patient reviews ({doctor.reviews.length})
+              {t("doctor.reviewsTitle", { n: doctor.reviews.length })}
             </h2>
 
             {reviewed === "1" && (
               <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
-                🙏 Thank you! Your review was submitted and will appear once approved.
+                {t("doctor.thanks")}
               </p>
             )}
 
@@ -248,8 +270,7 @@ export default async function DoctorPage({ params, searchParams }: Props) {
             )}
             {session?.role === "PATIENT" && !canReview && (
               <p className="mt-3 rounded-lg bg-slate-50 px-4 py-2.5 text-sm text-slate-500">
-                💡 You can review this doctor after completing an appointment with
-                them.
+                {t("doctor.reviewGate")}
               </p>
             )}
 
@@ -274,9 +295,7 @@ export default async function DoctorPage({ params, searchParams }: Props) {
                 </div>
               ))}
               {doctor.reviews.length === 0 && (
-                <p className="text-slate-400">
-                  No reviews yet — be the first after your visit.
-                </p>
+                <p className="text-slate-400">{t("doctor.noReviewsYet")}</p>
               )}
             </div>
           </section>
@@ -285,14 +304,14 @@ export default async function DoctorPage({ params, searchParams }: Props) {
         {/* Booking sidebar */}
         <aside>
           <div className="sticky top-24 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="font-bold text-slate-900">Book an appointment</h3>
+            <h3 className="font-bold text-slate-900">{t("doctor.bookTitle")}</h3>
             <ul className="mt-3 space-y-2 text-sm text-slate-600">
               <li className="flex justify-between">
-                <span>🏥 In-person</span>
+                <span>🏥 {t("doctor.feeInPerson").replace("🏥 ", "")}</span>
                 <span className="font-semibold">{formatFee(doctor.inPersonFee)}</span>
               </li>
               <li className="flex justify-between">
-                <span>🎥 Video</span>
+                <span>🎥 {t("doctor.feeVideo").replace("🎥 ", "")}</span>
                 <span className="font-semibold">
                   {doctor.videoFee != null ? formatFee(doctor.videoFee) : "—"}
                 </span>
@@ -302,12 +321,12 @@ export default async function DoctorPage({ params, searchParams }: Props) {
               href={`/book/${doctor.id}`}
               className="mt-4 block rounded-lg bg-teal-600 px-4 py-2.5 text-center font-semibold text-white transition hover:bg-teal-700"
             >
-              Book Appointment
+              {t("doctor.bookTitle")}
             </Link>
             <p className="mt-3 text-center text-xs text-slate-400">
-              {doctor.facility.name}
+              {facilityName}
               <br />
-              📍 {doctor.facility.city.name}, {doctor.facility.city.country.name}
+              📍 {cityName}, {countryName}
             </p>
           </div>
         </aside>

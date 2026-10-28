@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import LoginForm from "@/components/auth/LoginForm";
 import { getSession } from "@/lib/auth";
+import { getI18n } from "@/lib/i18n/server";
 
 export const metadata = { title: "Sign in" };
 export const instant = false;
@@ -14,6 +15,7 @@ export default async function LoginPage({
   const session = await getSession();
   if (session) redirect("/");
 
+  const { t } = await getI18n();
   const { next } = await searchParams;
 
   return (
@@ -23,21 +25,21 @@ export default async function LoginPage({
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-600 text-3xl">
             🏥
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Welcome back</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Sign in to book appointments and manage your bookings
-          </p>
+          <h1 className="text-2xl font-bold text-slate-900">
+            {t("auth.signInTitle")}
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">{t("auth.signInSub")}</p>
         </div>
 
         <LoginForm redirectTo={typeof next === "string" ? next : undefined} />
 
         <p className="mt-6 text-center text-sm text-slate-500">
-          New to MediGuide?{" "}
+          {t("auth.newHere")}{" "}
           <Link
             href={`/register${typeof next === "string" ? `?next=${next}` : ""}`}
             className="font-medium text-teal-700 hover:underline"
           >
-            Create an account
+            {t("auth.createAccount")}
           </Link>
         </p>
 
