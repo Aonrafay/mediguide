@@ -77,20 +77,20 @@ async function main() {
   );
 
   // ---------- Countries & cities ----------
-  const geo: Record<string, string[]> = {
-    Pakistan: ["Lahore", "Karachi", "Islamabad", "Multan"],
-    "United Arab Emirates": ["Dubai", "Abu Dhabi", "Sharjah"],
-    "Saudi Arabia": ["Riyadh", "Jeddah", "Makkah"],
-    Turkey: ["Istanbul", "Ankara", "Izmir"],
-    Malaysia: ["Kuala Lumpur", "Penang", "Johor Bahru"],
-    India: ["Delhi", "Mumbai", "Bangalore"],
+  const geo: Record<string, { code: string; cities: string[] }> = {
+    Pakistan: { code: "PK", cities: ["Lahore", "Karachi", "Islamabad", "Multan"] },
+    "United Arab Emirates": { code: "AE", cities: ["Dubai", "Abu Dhabi", "Sharjah"] },
+    "Saudi Arabia": { code: "SA", cities: ["Riyadh", "Jeddah", "Makkah"] },
+    Turkey: { code: "TR", cities: ["Istanbul", "Ankara", "Izmir"] },
+    Malaysia: { code: "MY", cities: ["Kuala Lumpur", "Penang", "Johor Bahru"] },
+    India: { code: "IN", cities: ["Delhi", "Mumbai", "Bangalore"] },
   };
 
-  for (const [countryName, cityNames] of Object.entries(geo)) {
+  for (const [countryName, { code, cities: cityNames }] of Object.entries(geo)) {
     const country = await db.country.upsert({
       where: { name: countryName },
-      update: {},
-      create: { name: countryName, code: countryName.slice(0, 2).toUpperCase() },
+      update: { code }, // fixes codes on re-seed
+      create: { name: countryName, code },
     });
     for (const cityName of cityNames) {
       await db.city.upsert({
@@ -172,20 +172,23 @@ async function main() {
     });
     if (!city) continue;
 
-    const facility = await db.facility.upsert({
-      where: { id: "never" },
-      update: {},
-      create: {
-        name: seed.name,
-        address: `${seed.name}, ${seed.city}, ${city.country.name}`,
-        description: `${seed.type} providing quality healthcare in ${seed.city}.`,
-        phone: "+92-300-0000000",
-        email: `info@${seed.name.toLowerCase().replace(/[^a-z]+/g, "")}.com`,
-        cityId: city.id,
-        typeId: typeMap.get(seed.type)!,
-        isVerified: true,
-      },
+    // Deduplicate by name+city so re-seeding doesn't create copies
+    const existingFacility = await db.facility.findFirst({
+      where: { name: seed.name, cityId: city.id },
     });
+    const facilityData = {
+      name: seed.name,
+      address: `${seed.name}, ${seed.city}, ${city.country.name}`,
+      description: `${seed.type} providing quality healthcare in ${seed.city}.`,
+      phone: "+92-300-0000000",
+      email: `info@${seed.name.toLowerCase().replace(/[^a-z]+/g, "")}.com`,
+      cityId: city.id,
+      typeId: typeMap.get(seed.type)!,
+      isVerified: true,
+    };
+    const facility = existingFacility
+      ? await db.facility.update({ where: { id: existingFacility.id }, data: facilityData })
+      : await db.facility.create({ data: facilityData });
 
     for (const doc of seed.doctors) {
       // Avoid duplicates on re-seed
@@ -237,6 +240,52 @@ async function main() {
       }
     }
   }
+
+  // ---------- Demo reviews (make doctor pages look alive) ----------
+  const reviewerHash = await bcrypt.hash("Patient@123", 10);
+  const reviewers = [
+    { name: "Ali Raza", email: "ali@example.com" },
+    { name: "Sara Ahmed", email: "sara@example.com" },
+    { name: "Bilal Hussain", email: "bilal@example.com" },
+  ];
+  const reviewerIds: string[] = [];
+  for (const reviewer of reviewers) {
+    const user = await db.user.upsert({
+      where: { email: reviewer.email },
+      update: {},
+      create: { name: reviewer.name, email: reviewer.email, passwordHash: reviewerHash, role: "PATIENT" },
+    });
+    reviewerIds.push(user.id);
+  }
+
+  async function addReview(doctorName: string, patientIdx: number, rating: number, comment: string) {
+    const doctor = await db.doctor.findFirst({ where: { name: doctorName } });
+    if (!doctor) return;
+    const patientId = reviewerIds[patientIdx]!;
+    await db.review.upsert({
+      where: { patientId_doctorId: { patientId, doctorId: doctor.id } },
+      update: { rating, comment, isApproved: true },
+      create: { patientId, doctorId: doctor.id, rating, comment, isApproved: true },
+    });
+    // Recompute denormalized rating
+    const agg = await db.review.aggregate({
+      where: { doctorId: doctor.id, isApproved: true },
+      _avg: { rating: true },
+      _count: true,
+    });
+    await db.doctor.update({
+      where: { id: doctor.id },
+      data: {
+        rating: agg._avg.rating ?? 0,
+        reviewCount: agg._count,
+      },
+    });
+  }
+
+  await addReview("Dr. Ahmed Hassan", 0, 5, "Very professional and explained everything clearly. Highly recommended!");
+  await addReview("Dr. Ahmed Hassan", 1, 4, "Great cardiologist, a bit of waiting time but worth it.");
+  await addReview("Dr. Sana Iqbal", 2, 5, "The video consultation was smooth and she was very attentive.");
+  await addReview("Dr. Ayesha Malik", 0, 4, "Fixed my skin issue quickly. Friendly staff too.");
 
   // ---------- Languages ----------
   const langs = [

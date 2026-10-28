@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { getSession } from "@/lib/auth";
-import LoginForm from "./LoginForm";
+import LoginForm from "@/components/auth/LoginForm";
 
 export const metadata: Metadata = { title: "Admin Login" };
 
