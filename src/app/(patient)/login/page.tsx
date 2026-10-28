@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import LoginForm from "@/components/auth/LoginForm";
@@ -29,7 +31,17 @@ export default async function LoginPage({
 
         <LoginForm redirectTo={typeof next === "string" ? next : undefined} />
 
-        <p className="mt-6 text-center text-xs text-slate-400">
+        <p className="mt-6 text-center text-sm text-slate-500">
+          New to MediGuide?{" "}
+          <Link
+            href={`/register${typeof next === "string" ? `?next=${next}` : ""}`}
+            className="font-medium text-teal-700 hover:underline"
+          >
+            Create an account
+          </Link>
+        </p>
+
+        <p className="mt-4 text-center text-xs text-slate-400">
           Demo patient: patient@mediguide.com / Patient@123
         </p>
       </div>

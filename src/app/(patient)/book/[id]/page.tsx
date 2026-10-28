@@ -2,16 +2,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Avatar } from "@/components/patient/cards";
+import BookingWidget from "@/components/patient/BookingWidget";
+import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { formatFee } from "@/lib/utils";
 
 export const metadata = { title: "Book Appointment" };
 export const instant = false;
 
-export default async function BookPage({
-  params,
-}: PageProps<"/book/[id]">) {
+type Props = PageProps<"/book/[id]">;
+
+export default async function BookPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const { error, date, mode } = await searchParams;
+
   const doctor = await db.doctor.findUnique({
     where: { id },
     include: {
@@ -21,54 +24,59 @@ export default async function BookPage({
   });
   if (!doctor || !doctor.isActive) notFound();
 
+  // Which weekdays support each mode (for disabling date chips)
+  const windows = await db.availability.findMany({
+    where: { doctorId: doctor.id, isActive: true },
+    select: { dayOfWeek: true, mode: true },
+  });
+  const modeDays: { IN_PERSON: number[]; VIDEO: number[] } = {
+    IN_PERSON: [],
+    VIDEO: [],
+  };
+  for (const w of windows) {
+    if (w.mode === "IN_PERSON" || w.mode === "BOTH")
+      modeDays.IN_PERSON.push(w.dayOfWeek);
+    if (w.mode === "VIDEO" || w.mode === "BOTH") modeDays.VIDEO.push(w.dayOfWeek);
+  }
+
+  const session = await getSession();
+
   return (
-    <main className="mx-auto max-w-2xl px-4 py-16">
-      <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center">
-        <div className="flex justify-center">
-          <Avatar name={doctor.name} size="h-20 w-20 text-2xl" />
-        </div>
-        <h1 className="mt-4 text-2xl font-bold text-slate-900">{doctor.name}</h1>
-        <p className="text-slate-500">
-          {doctor.specialty.icon} {doctor.specialty.name} · {doctor.facility.name}
-        </p>
+    <main className="mx-auto max-w-3xl px-4 py-10">
+      <nav className="text-sm text-slate-500">
+        <Link href={`/doctor/${doctor.id}`} className="hover:text-teal-700">
+          ← {doctor.name}
+        </Link>
+      </nav>
 
-        <div className="mt-6 rounded-2xl bg-amber-50 p-5 text-sm text-amber-800">
-          <p className="text-2xl">🚧</p>
-          <p className="mt-2 font-semibold">
-            Online booking launches in Phase 4
+      {/* Doctor summary */}
+      <div className="mt-4 flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5">
+        <Avatar name={doctor.name} />
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Book — {doctor.name}</h1>
+          <p className="text-sm text-slate-500">
+            {doctor.specialty.icon} {doctor.specialty.name} · {doctor.qualification}
           </p>
-          <p className="mt-1">
-            The slot-picker (choose date &amp; time, in-person or video) is the next
-            milestone. Until then, book by phone:
-          </p>
-        </div>
-
-        <div className="mt-6 space-y-2 text-sm text-slate-600">
-          <p>
-            🏥 In-person fee:{" "}
-            <span className="font-semibold">{formatFee(doctor.inPersonFee)}</span>
-          </p>
-          {doctor.videoFee != null && (
-            <p>
-              🎥 Video fee:{" "}
-              <span className="font-semibold">{formatFee(doctor.videoFee)}</span>
-            </p>
-          )}
-          <p>
-            📞 {doctor.facility.phone ?? "Contact the facility for bookings"}
-          </p>
-          <p>
-            📍 {doctor.facility.address}, {doctor.facility.city.name},{" "}
+          <p className="text-xs text-slate-400">
+            {doctor.facility.name}, {doctor.facility.city.name},{" "}
             {doctor.facility.city.country.name}
           </p>
         </div>
+      </div>
 
-        <Link
-          href={`/doctor/${doctor.id}`}
-          className="mt-8 inline-block rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-        >
-          ← Back to profile
-        </Link>
+      {/* Booking widget */}
+      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
+        <BookingWidget
+          doctorId={doctor.id}
+          offersVideo={doctor.offersVideo}
+          inPersonFee={doctor.inPersonFee}
+          videoFee={doctor.videoFee}
+          isLoggedIn={session?.role === "PATIENT"}
+          modeDays={modeDays}
+          initialError={typeof error === "string" ? error : undefined}
+          initialDate={typeof date === "string" ? date : undefined}
+          initialMode={typeof mode === "string" ? mode : undefined}
+        />
       </div>
     </main>
   );

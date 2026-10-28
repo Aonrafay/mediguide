@@ -45,6 +45,14 @@ export default async function PatientHeader() {
           >
             Find Doctors
           </Link>
+          {session?.role === "PATIENT" && (
+            <Link
+              href="/account"
+              className="rounded-full px-3 py-1.5 font-medium text-slate-600 transition hover:bg-slate-100"
+            >
+              My Appointments
+            </Link>
+          )}
           <LanguageChip />
           {session ? (
             <div className="flex items-center gap-2">
@@ -61,12 +69,20 @@ export default async function PatientHeader() {
               </form>
             </div>
           ) : (
-            <Link
-              href="/login"
-              className="rounded-full bg-teal-600 px-4 py-1.5 font-semibold text-white transition hover:bg-teal-700"
-            >
-              Sign in
-            </Link>
+            <>
+              <Link
+                href="/login"
+                className="rounded-full px-3 py-1.5 font-medium text-slate-600 transition hover:bg-slate-100"
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/register"
+                className="rounded-full bg-teal-600 px-4 py-1.5 font-semibold text-white transition hover:bg-teal-700"
+              >
+                Register
+              </Link>
+            </>
           )}
         </nav>
       </div>

@@ -20,6 +20,16 @@ export function formatDate(date: Date | string) {
   });
 }
 
+/** UTC-safe date formatting for stored appointment dates. */
+export function formatDateUTC(date: Date | string) {
+  return new Date(date).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 /** Appointment/booking status badge color classes. */
 export const statusColors: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-700",
