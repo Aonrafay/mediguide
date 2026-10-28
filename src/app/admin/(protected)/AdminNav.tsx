@@ -13,6 +13,8 @@ const links = [
   { href: "/admin/doctors", label: "Doctors", icon: "👨‍⚕️" },
   { href: "/admin/appointments", label: "Appointments", icon: "📅" },
   { href: "/admin/reviews", label: "Reviews", icon: "⭐" },
+  { href: "/admin/messages", label: "Contact Inbox", icon: "📨" },
+  { href: "/admin/blog", label: "Blog", icon: "📰" },
   { href: "/admin/users", label: "Users", icon: "👥" },
   { href: "/admin/languages", label: "Languages", icon: "🌐" },
   { href: "/admin/settings", label: "Settings", icon: "⚙️" },

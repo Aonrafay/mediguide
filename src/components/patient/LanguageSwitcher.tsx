@@ -13,16 +13,23 @@ export type SwitcherLanguage = {
 export default function LanguageSwitcher({
   languages,
   current,
+  variant = "pill",
 }: {
   languages: SwitcherLanguage[];
   current: string;
+  /** pill = header style (hidden on mobile); inline = always visible (mobile menu) */
+  variant?: "pill" | "inline";
 }) {
   const pathname = usePathname();
 
   return (
     <form
       action={setLocale}
-      className="hidden items-center gap-1 rounded-full border border-slate-200 px-2 py-1 sm:inline-flex"
+      className={`${
+        variant === "pill"
+          ? "hidden items-center gap-1 rounded-full border border-slate-200 px-2 py-1 sm:inline-flex"
+          : "flex w-full items-center gap-2 rounded-full bg-slate-50 px-3 py-2"
+      }`}
     >
       <input type="hidden" name="path" value={pathname} />
       <span aria-hidden>🌐</span>
@@ -30,7 +37,7 @@ export default function LanguageSwitcher({
         name="locale"
         defaultValue={current}
         onChange={(event) => event.currentTarget.form?.requestSubmit()}
-        className="bg-transparent py-0.5 pl-0 pr-1 text-sm font-medium text-slate-600 outline-none"
+        className="w-full bg-transparent text-sm font-medium text-slate-600 outline-none"
         aria-label="Language"
       >
         {languages.map((language) => (

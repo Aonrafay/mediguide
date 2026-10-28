@@ -231,3 +231,36 @@ model ContentTranslation {
   @@unique([entityType, entityId, languageCode, field])
   @@index([entityType, entityId])
 }
+
+model BlogPost {
+  id          String   @id @default(cuid())
+  slug        String   @unique // url: /blog/my-post
+  title       String
+  excerpt     String
+  content     String // plain text, blank line = new paragraph
+  coverImage  String?
+  category    String // Nutrition | Mental Health | Child Health | General…
+  tags        String   @default("[]") // JSON array
+  authorName  String   @default("MediGuide Team")
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+  views       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([isPublished, publishedAt])
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([isRead])
+}

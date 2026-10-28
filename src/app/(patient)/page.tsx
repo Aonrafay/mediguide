@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { DoctorCard } from "@/components/patient/cards";
+import { DoctorCard, FacilityCard } from "@/components/patient/cards";
 import { db } from "@/lib/db";
 import { flagEmoji } from "@/lib/slugs";
 import { getI18n, loadContentTranslator } from "@/lib/i18n/server";
@@ -9,32 +9,53 @@ export const instant = false;
 
 export default async function HomePage() {
   const { locale, t } = await getI18n();
-  const tr = await loadContentTranslator(locale, ["Country", "Specialty"]);
+  const tr = await loadContentTranslator(locale, ["Country", "Specialty", "Facility", "FacilityType"]);
 
-  const [countries, stats, featuredDoctors] = await Promise.all([
-    db.country.findMany({
-      where: { isActive: true },
-      orderBy: { name: "asc" },
-      include: {
-        _count: { select: { cities: true } },
-      },
-    }),
-    Promise.all([
-      db.country.count({ where: { isActive: true } }),
-      db.city.count({ where: { isActive: true } }),
-      db.facility.count({ where: { isActive: true } }),
-      db.doctor.count({ where: { isActive: true } }),
-    ]),
-    db.doctor.findMany({
-      where: { isActive: true, offersVideo: true },
-      orderBy: [{ rating: "desc" }, { experienceYears: "desc" }],
-      take: 6,
-      include: {
-        specialty: true,
-        facility: { include: { city: { include: { country: true } } } },
-      },
-    }),
-  ]);
+  const [countries, stats, featuredDoctors, specialties, featuredFacilities, latestPosts] =
+    await Promise.all([
+      db.country.findMany({
+        where: { isActive: true },
+        orderBy: { name: "asc" },
+        include: {
+          _count: { select: { cities: true } },
+        },
+      }),
+      Promise.all([
+        db.country.count({ where: { isActive: true } }),
+        db.city.count({ where: { isActive: true } }),
+        db.facility.count({ where: { isActive: true } }),
+        db.doctor.count({ where: { isActive: true } }),
+      ]),
+      db.doctor.findMany({
+        where: { isActive: true, offersVideo: true },
+        orderBy: [{ rating: "desc" }, { experienceYears: "desc" }],
+        take: 6,
+        include: {
+          specialty: true,
+          facility: { include: { city: { include: { country: true } } } },
+        },
+      }),
+      db.specialty.findMany({
+        where: { isActive: true },
+        orderBy: { name: "asc" },
+        take: 10,
+      }),
+      db.facility.findMany({
+        where: { isActive: true, isVerified: true },
+        orderBy: [{ createdAt: "desc" }],
+        take: 6,
+        include: {
+          type: true,
+          city: { include: { country: true } },
+          _count: { select: { doctors: true } },
+        },
+      }),
+      db.blogPost.findMany({
+        where: { isPublished: true },
+        orderBy: { publishedAt: "desc" },
+        take: 3,
+      }),
+    ]);
 
   const [countryCount, cityCount, facilityCount, doctorCount] = stats;
 
@@ -104,6 +125,22 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Specialty quick links */}
+      <section className="mx-auto max-w-6xl px-4 pt-12">
+        <div className="flex gap-3 overflow-x-auto pb-2">
+          {specialties.map((specialty) => (
+            <Link
+              key={specialty.id}
+              href={`/doctors?specialty=${specialty.id}`}
+              className="flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-teal-300 hover:text-teal-700"
+            >
+              <span className="text-lg">{specialty.icon ?? "🩺"}</span>
+              {tr("Specialty", specialty.id, "name", specialty.name)}
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {/* Browse by country */}
       <section className="mx-auto max-w-6xl px-4 py-14">
         <h2 className="text-2xl font-bold text-slate-900">{t("home.browseTitle")}</h2>
@@ -169,6 +206,50 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Featured facilities */}
+      {featuredFacilities.length > 0 && (
+        <section className="mx-auto max-w-6xl px-4 py-6">
+          <h2 className="text-2xl font-bold text-slate-900">
+            {t("home.facilitiesTitle") ?? "Featured facilities"}
+          </h2>
+          <p className="mt-1 text-slate-500">
+            {t("home.facilitiesSub") ?? "Verified places patients trust"}
+          </p>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {featuredFacilities.map((facility) => (
+              <FacilityCard
+                key={facility.id}
+                facility={{
+                  ...facility,
+                  name: tr("Facility", facility.id, "name", facility.name),
+                  type: {
+                    ...facility.type,
+                    name: tr("FacilityType", facility.typeId, "name", facility.type.name),
+                  },
+                  city: {
+                    ...facility.city,
+                    name: tr("City", facility.cityId, "name", facility.city.name),
+                    country: {
+                      ...facility.city.country,
+                      name: tr(
+                        "Country",
+                        facility.city.countryId,
+                        "name",
+                        facility.city.country.name
+                      ),
+                    },
+                  },
+                }}
+                labels={{
+                  verified: t("facility.verified"),
+                  doctors: (n) => t("card.doctors", { n }),
+                }}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Featured doctors (video consultations available) */}
       {featuredDoctors.length > 0 && (
         <section className="mx-auto max-w-6xl px-4 py-14">
@@ -208,6 +289,97 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      {/* Testimonials */}
+      <section className="bg-white py-14">
+        <div className="mx-auto max-w-6xl px-4">
+          <h2 className="text-center text-2xl font-bold text-slate-900">
+            {t("home.testimonialsTitle") ?? "What patients say"}
+          </h2>
+          <div className="mt-8 grid gap-6 sm:grid-cols-3">
+            {[
+              {
+                name: "Ayesha K.",
+                city: "Lahore 🇵🇰",
+                text: "Found a cardiologist near me in two minutes and booked a video call the same evening. Very easy!",
+              },
+              {
+                name: "Omar F.",
+                city: "Dubai 🇦🇪",
+                text: "The Arabic interface made it simple for my mother to choose a hospital herself. Great idea.",
+              },
+              {
+                name: "Selin Y.",
+                city: "Istanbul 🇹🇷",
+                text: "Fees and timings are visible before booking — no surprises. I use it for my whole family now.",
+              },
+            ].map((item) => (
+              <div
+                key={item.name}
+                className="rounded-2xl border border-slate-100 bg-slate-50 p-6"
+              >
+                <p className="text-amber-400">★★★★★</p>
+                <p className="mt-2 text-sm text-slate-600">“{item.text}”</p>
+                <p className="mt-3 text-sm font-bold text-slate-900">{item.name}</p>
+                <p className="text-xs text-slate-400">{item.city}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Latest health tips (blog teaser) */}
+      {latestPosts.length > 0 && (
+        <section className="mx-auto max-w-6xl px-4 py-14">
+          <div className="flex items-end justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">{t("blog.title")}</h2>
+              <p className="mt-1 text-slate-500">{t("blog.subtitle")}</p>
+            </div>
+            <Link
+              href="/blog"
+              className="text-sm font-semibold text-teal-700 hover:underline"
+            >
+              {t("home.viewAll")}
+            </Link>
+          </div>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {latestPosts.map((post) => (
+              <Link
+                key={post.id}
+                href={`/blog/${post.slug}`}
+                className="rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-teal-300 hover:shadow-md"
+              >
+                <span className="rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-700">
+                  {post.category}
+                </span>
+                <h3 className="mt-2 font-bold text-slate-900">{post.title}</h3>
+                <p className="mt-1 line-clamp-2 text-sm text-slate-500">
+                  {post.excerpt}
+                </p>
+                <span className="mt-3 block text-sm font-semibold text-teal-700">
+                  {t("blog.readMore")}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* CTA — get listed */}
+      <section className="mx-auto max-w-6xl px-4 pb-16">
+        <div className="rounded-3xl bg-slate-900 p-10 text-center text-white">
+          <p className="text-3xl">🤝</p>
+          <h2 className="mt-2 text-2xl font-bold">{t("about.ctaTitle")}</h2>
+          <p className="mx-auto mt-2 max-w-xl text-slate-300">{t("about.ctaText")}</p>
+          <Link
+            href="/contact"
+            className="mt-6 inline-block rounded-xl bg-teal-500 px-6 py-3 font-semibold text-white transition hover:bg-teal-600"
+          >
+            {t("about.ctaButton")}
+          </Link>
+        </div>
+      </section>
     </main>
   );
 }

@@ -7,6 +7,12 @@ export const en: Record<string, string> = {
   "nav.register": "Register",
   "nav.signOut": "Sign out",
   "nav.searchPlaceholder": "Search doctors, specialties…",
+  "nav.blog": "Blog",
+  "nav.about": "About",
+  "nav.contact": "Contact",
+  "nav.faq": "FAQ",
+  "nav.privacy": "Privacy Policy",
+  "nav.terms": "Terms of Service",
   "common.home": "Home",
 
   // Home
@@ -145,7 +151,89 @@ export const en: Record<string, string> = {
     "Find the right care, anywhere. Hospitals, clinics, medical complexes and labs — with doctor profiles and in-person or video appointments.",
   "footer.explore": "Explore",
   "footer.browse": "Browse by Country",
+  "footer.company": "Company",
+  "footer.legal": "Legal",
+  "footer.contactTitle": "Contact",
+  "footer.followUs": "Follow us",
   "footer.aboutTitle": "About",
   "footer.aboutText":
     "MediGuide is a Final Year Project demonstrating a global, multi-country healthcare directory with appointment booking.",
+
+  // About page
+  "about.title": "About MediGuide",
+  "about.subtitle":
+    "A global healthcare directory that connects patients with the right hospitals, clinics and doctors — in their own language.",
+  "about.missionTitle": "Our mission",
+  "about.missionText":
+    "Make healthcare discovery effortless: pick your country, your city and the type of care you need — then compare real doctor profiles, fees and timings before you book. No confusion, no phone-call ping-pong.",
+  "about.visionTitle": "Our vision",
+  "about.visionText":
+    "One trusted platform where a patient in Lahore, Dubai, Istanbul or anywhere can find care in minutes — in person or by video, in English, Arabic, Urdu and more.",
+  "about.statsTitle": "MediGuide in numbers",
+  "about.howTitle": "How MediGuide works",
+  "about.valuesTitle": "What we stand for",
+  "about.value1t": "Trust",
+  "about.value1d": "Verified facilities and moderated patient reviews keep listings honest.",
+  "about.value2t": "Accessibility",
+  "about.value2d": "Multi-language with full RTL support — healthcare information for everyone.",
+  "about.value3t": "Flexibility",
+  "about.value3d": "In-person visits and video consultations side by side, with transparent fees.",
+  "about.ctaTitle": "Are you a clinic, hospital or lab?",
+  "about.ctaText": "Get listed on MediGuide and reach patients searching for care in your city.",
+  "about.ctaButton": "Contact our team",
+
+  // Contact page
+  "contact.title": "Contact us",
+  "contact.subtitle":
+    "Questions about bookings, listings or partnerships? Send us a message — we reply within 1–2 working days.",
+  "contact.formTitle": "Send a message",
+  "contact.name": "Full name",
+  "contact.email": "Email",
+  "contact.phone": "Phone (optional)",
+  "contact.subject": "Subject",
+  "contact.message": "Message",
+  "contact.send": "Send message",
+  "contact.sending": "Sending…",
+  "contact.infoTitle": "Reach us directly",
+  "contact.emailLabel": "Email",
+  "contact.phoneLabel": "Phone",
+  "contact.addressLabel": "Office",
+  "contact.hoursLabel": "Support hours",
+  "contact.hoursValue": "Mon–Sat, 9:00–18:00 (PKT)",
+  "contact.mapButton": "🗺️ View on map",
+  "contact.success":
+    "✅ Message sent! Our team will reply within 1–2 working days.",
+
+  // FAQ page
+  "faq.title": "Frequently asked questions",
+  "faq.subtitle": "Everything about finding care and booking on MediGuide.",
+  "faq.catBooking": "Booking & appointments",
+  "faq.catVideo": "Video consultations",
+  "faq.catAccount": "Accounts & reviews",
+  "faq.catClinics": "For clinics & doctors",
+
+  // Legal pages
+  "privacy.title": "Privacy Policy",
+  "privacy.updated": "Last updated: October 2026",
+  "terms.title": "Terms of Service",
+  "legal.demoNote":
+    "This is a Final Year Project demonstration — the text below is sample content, not legal advice.",
+  "legal.back": "← Back to home",
+
+  // Blog (used in 8C)
+  "blog.title": "Health Blog",
+  "blog.subtitle": "Practical health tips from the MediGuide team.",
+  "blog.searchPlaceholder": "Search articles…",
+  "blog.allCategories": "All",
+  "blog.readMore": "Read article →",
+  "blog.minRead": "min read",
+  "blog.views": "views",
+  "blog.by": "By",
+  "blog.related": "Related articles",
+  "blog.none": "No articles found.",
+  "blog.backToBlog": "← Back to blog",
+  "blog.notPublished": "This article is not published yet.",
+  "home.facilitiesTitle": "Featured facilities",
+  "home.facilitiesSub": "Verified places patients trust",
+  "home.testimonialsTitle": "What patients say",
 };

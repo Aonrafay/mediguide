@@ -411,6 +411,90 @@ async function main() {
     });
   }
 
+  // ---------- Blog posts ----------
+  const blogPosts = [
+    {
+      slug: "manage-diabetes-daily",
+      title: "Managing Diabetes: 6 Simple Daily Habits",
+      excerpt:
+        "Small daily choices make a big difference for blood sugar control. Here are six habits endocrinologists recommend to every patient.",
+      category: "General Health",
+      tags: ["diabetes", "lifestyle", "blood sugar"],
+      authorName: "Dr. Sana Iqbal",
+      content:
+        "Diabetes management can feel overwhelming, but it really comes down to a handful of consistent habits repeated every day.\n\nStart with regular meal times. Eating at roughly the same hours each day keeps blood sugar predictable and makes medication timing easier.\n\nWalk after meals. Even a 10–15 minute walk after lunch or dinner helps your muscles absorb glucose without extra insulin.\n\nCheck your feet weekly. Diabetes can reduce sensation in the feet, so small cuts can go unnoticed. A quick weekly check prevents big problems.\n\nKeep water nearby and skip sugary drinks — liquid sugar is the fastest way to spike your glucose.\n\nSleep 7–8 hours. Poor sleep raises insulin resistance, making the next day harder.\n\nFinally, keep every follow-up appointment. Doctors can only adjust your plan when they see your trends over time — book your next visit before leaving the clinic.",
+    },
+    {
+      slug: "child-nutrition-basics",
+      title: "Child Nutrition Basics Every Parent Should Know",
+      excerpt:
+        "Fussy eating, growth spurts and lunchbox battles — a pediatrician's practical guide to feeding children aged 2–12 without stress.",
+      category: "Child Health",
+      tags: ["children", "nutrition", "parenting"],
+      authorName: "Dr. Fatima Khan",
+      content:
+        "Children do not need perfect meals — they need varied ones, offered calmly and repeatedly.\n\nFollow the plate rule: half vegetables and fruit, one quarter protein, one quarter grains. It works for toddlers and ten-year-olds alike.\n\nOffer a new food up to 15 times before deciding your child dislikes it. Taste buds change, and pressure-free repetition is how they learn to like vegetables.\n\nMilk is food, not a drink to sip all day. More than 500 ml a day can crowd out iron-rich foods and cause anemia.\n\nInvolve children in cooking. A child who washed the spinach is dramatically more likely to eat the spinach.\n\nAnd remember: growth is measured over months, not days. If your child is energetic and following their growth curve, an occasional skipped dinner is not a crisis.\n\nIf you notice persistent poor growth, fatigue or tummy pain, book a pediatric check-up rather than relying on supplements.",
+    },
+    {
+      slug: "video-consultation-prepare",
+      title: "How to Prepare for a Video Consultation",
+      excerpt:
+        "A two-minute checklist that makes your online doctor visit as useful as an in-person one — lighting, notes, medicines and more.",
+      category: "Preventive Care",
+      tags: ["telemedicine", "video", "checklist"],
+      authorName: "MediGuide Team",
+      content:
+        "Video consultations save travel time and work brilliantly for follow-ups, rashes, reports and medication reviews. A little preparation makes them twice as effective.\n\nWrite down your three main questions before the call — it is easy to forget them on camera.\n\nSit near a window or lamp with light on your face, not behind you. Doctors rely on visuals more than people expect.\n\nKeep your medicines boxes beside you, not remembered from memory. Reading the actual label prevents dosing mistakes.\n\nHave recent lab reports or photos of the problem ready to share on screen.\n\nJoin five minutes early from a quiet place, with headphones if possible.\n\nOn MediGuide, your Join Call button appears in My Appointments as soon as the clinic confirms — no extra app needed.",
+    },
+    {
+      slug: "seasonal-flu-guide",
+      title: "Seasonal Flu: When to Rest at Home and When to See a Doctor",
+      excerpt:
+        "Most flu resolves with rest and fluids — but some warning signs need medical attention fast. Learn the difference.",
+      category: "General Health",
+      tags: ["flu", "fever", "when to see a doctor"],
+      authorName: "Dr. Omar Sheikh",
+      content:
+        "Seasonal flu hits every household eventually. Most healthy adults recover in about a week with rest, fluids and simple fever control.\n\nSee a doctor promptly if breathing becomes difficult, fever returns after improving, you become confused, or you belong to a higher-risk group: over 65, pregnant, diabetic, asthmatic, or under 5 years old.\n\nAntibiotics do not treat flu — it is a virus. They only help when a bacterial complication appears, which your doctor can assess.\n\nAnnual flu vaccination remains the single best prevention, especially for the high-risk groups above.\n\nIf you are unsure whether your symptoms need attention, book a video consultation first — it often settles the question without a clinic trip.",
+    },
+    {
+      slug: "mental-health-everyday",
+      title: "Mental Health: 4 Small Practices With Big Effects",
+      excerpt:
+        "You do not need a retreat to protect your mental health. Four evidence-based micro-habits that fit any schedule.",
+      category: "Mental Health",
+      tags: ["mental health", "stress", "sleep"],
+      authorName: "MediGuide Team",
+      content:
+        "Mental health is built (or eroded) in ordinary moments, not grand gestures.\n\nName what you feel. Putting a precise word on an emotion — annoyed, lonely, worried — measurably lowers its intensity.\n\nProtect one anchor habit: a fixed wake-up time. Irregular sleep is one of the strongest disruptors of mood.\n\nMove your body for 20 minutes most days. For mild low mood, regular walking compares surprisingly well with medication in several studies.\n\nKeep one social connection alive each week. A short call counts.\n\nAnd know when self-help is not enough: if low mood, anxiety or sleep problems persist for more than two weeks or affect your work and relationships, book an appointment with a physician or mental-health professional. Seeking help early is a strength, not a weakness.",
+    },
+    {
+      slug: "first-aid-basics-home",
+      title: "First-Aid Basics Every Home Should Know",
+      excerpt:
+        "Burns, cuts, choking and fainting — the correct first response for the four most common household emergencies.",
+      category: "Preventive Care",
+      tags: ["first aid", "safety", "emergency"],
+      authorName: "Dr. Bilal Raza",
+      content:
+        "The first five minutes of an emergency matter more than the next five hours. Here is what actually helps.\n\nBurns: cool running water for 20 minutes. Never ice, never toothpaste. Cover loosely with a clean cloth and seek care for anything larger than the patient's palm.\n\nCuts: press firmly with a clean cloth for 10 uninterrupted minutes. Elevate. Seek care if the edges gape, bleeding soaks through, or the object was dirty and tetanus is not up to date.\n\nChoking (adult): encourage coughing first. If silent, give up to 5 back blows between the shoulder blades, then abdominal thrusts. Call emergency help.\n\nFainting: lay the person flat and raise the legs. Do not sit them up or give water until fully alert. If recovery is slow, or there was chest pain or a head injury first, arrange medical care immediately.\n\nConsider saving your nearest emergency department's number in your phone today — before you need it.",
+    },
+  ];
+
+  for (const post of blogPosts) {
+    await db.blogPost.upsert({
+      where: { slug: post.slug },
+      update: {},
+      create: {
+        ...post,
+        tags: JSON.stringify(post.tags),
+        isPublished: true,
+        publishedAt: new Date(),
+        coverImage: null,
+      },
+    });
+  }
+
   // ---------- Languages ----------
   const langs = [
     { code: "en", name: "English", nativeName: "English", direction: "ltr", isDefault: true },

@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { logout } from "@/lib/actions/auth";
 import { getSession } from "@/lib/auth";
+import { normalizeTheme, THEME_COOKIE, type Theme } from "@/lib/theme";
 
 import AdminNav from "./AdminNav";
+import ThemeToggle from "@/components/patient/ThemeToggle";
 
 // Admin area reads the session on every request — allow blocking renders.
 export const instant = false;
@@ -13,6 +16,9 @@ export default async function AdminLayout({
   const session = await getSession();
   if (!session) redirect("/admin/login?next=/admin");
   if (session.role !== "ADMIN") redirect("/");
+
+  const cookieStore = await cookies();
+  const theme: Theme = normalizeTheme(cookieStore.get(THEME_COOKIE)?.value);
 
   return (
     <div className="flex min-h-screen">
@@ -35,14 +41,17 @@ export default async function AdminLayout({
             Signed in as{" "}
             <span className="font-semibold text-slate-800">{session.name}</span>
           </p>
-          <form action={logout}>
-            <button
-              type="submit"
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-            >
-              Sign out
-            </button>
-          </form>
+          <div className="flex items-center gap-3">
+            <ThemeToggle initial={theme} />
+            <form action={logout}>
+              <button
+                type="submit"
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </header>
         <main className="flex-1 overflow-y-auto bg-slate-50 p-6">{children}</main>
       </div>

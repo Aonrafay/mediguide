@@ -6,6 +6,12 @@ export const ar: Record<string, string> = {
   "nav.register": "حساب جديد",
   "nav.signOut": "تسجيل الخروج",
   "nav.searchPlaceholder": "ابحث عن أطباء، تخصصات…",
+  "nav.blog": "المدونة",
+  "nav.about": "من نحن",
+  "nav.contact": "اتصل بنا",
+  "nav.faq": "الأسئلة الشائعة",
+  "nav.privacy": "سياسة الخصوصية",
+  "nav.terms": "شروط الاستخدام",
   "common.home": "الرئيسية",
 
   "home.heroTitle": "اعثر على الرعاية المناسبة، في أي مكان",
@@ -130,7 +136,88 @@ export const ar: Record<string, string> = {
     "اعثر على الرعاية المناسبة، في أي مكان. مستشفيات وعيادات ومجمعات طبية ومختبرات — مع ملفات الأطباء وحجز المواعيد الحضورية والفيديو.",
   "footer.explore": "استكشف",
   "footer.browse": "تصفّح حسب الدولة",
+  "footer.company": "الشركة",
+  "footer.legal": "قانوني",
+  "footer.contactTitle": "تواصل معنا",
+  "footer.followUs": "تابعنا",
   "footer.aboutTitle": "حول",
   "footer.aboutText":
     "MediGuide مشروع تخرّج يعرض دليلًا صحيًا عالميًا متعدد الدول مع حجز المواعيد.",
+
+  // About page
+  "about.title": "عن MediGuide",
+  "about.subtitle":
+    "دليل صحي عالمي يربط المرضى بالمستشفيات والعيادات والأطباء المناسبين — بلغتهم الخاصة.",
+  "about.missionTitle": "مهمتنا",
+  "about.missionText":
+    "جعل البحث عن الرعاية الصحية سهلًا: اختر دولتك ومدينتك ونوع الرعاية — ثم قارن ملفات الأطباء الحقيقية والأجرة والمواعيد قبل الحجز.",
+  "about.visionTitle": "رؤيتنا",
+  "about.visionText":
+    "منصة موثوقة واحدة يجد فيها المريض في لاهور أو دبي أو إستنبول الرعاية في دقائق — حضوريًا أو عبر الفيديو، بالإنجليزية والعربية والأردية وغيرها.",
+  "about.statsTitle": "MediGuide بالأرقام",
+  "about.howTitle": "كيف يعمل MediGuide",
+  "about.valuesTitle": "قيمنا",
+  "about.value1t": "الثقة",
+  "about.value1d": "منشآت موثّقة وتقييمات مُدارة تحافظ على صدق البيانات.",
+  "about.value2t": "سهولة الوصول",
+  "about.value2d": "دعم متعدد اللغات مع دعم كامل للكتابة من اليمين لليسار.",
+  "about.value3t": "المرونة",
+  "about.value3d": "زيارات حضورية واستشارات فيديو جنبًا إلى جنب بأجرة واضحة.",
+  "about.ctaTitle": "هل تدير عيادة أو مستشفى أو مختبرًا؟",
+  "about.ctaText": "أدرج منشأتك على MediGuide لتصل إلى المرضى في مدينتك.",
+  "about.ctaButton": "تواصل مع فريقنا",
+
+  // Contact page
+  "contact.title": "اتصل بنا",
+  "contact.subtitle":
+    "أسئلة عن الحجز أو الإدراج أو الشراكات؟ أرسل رسالة — نرد خلال 1–2 يوم عمل.",
+  "contact.formTitle": "أرسل رسالة",
+  "contact.name": "الاسم الكامل",
+  "contact.email": "البريد الإلكتروني",
+  "contact.phone": "الهاتف (اختياري)",
+  "contact.subject": "الموضوع",
+  "contact.message": "الرسالة",
+  "contact.send": "إرسال",
+  "contact.sending": "جارٍ الإرسال…",
+  "contact.infoTitle": "تواصل مباشرة",
+  "contact.emailLabel": "البريد",
+  "contact.phoneLabel": "الهاتف",
+  "contact.addressLabel": "المكتب",
+  "contact.hoursLabel": "ساعات الدعم",
+  "contact.hoursValue": "الاثنين–السبت، 9:00–18:00",
+  "contact.mapButton": "🗺️ افتح الخريطة",
+  "contact.success": "✅ تم إرسال رسالتك! سنرد خلال 1–2 يوم عمل.",
+
+  // FAQ page
+  "faq.title": "الأسئلة الشائعة",
+  "faq.subtitle": "كل ما يخص البحث عن الرعاية والحجز على MediGuide.",
+  "faq.catBooking": "الحجز والمواعيد",
+  "faq.catVideo": "الاستشارات عبر الفيديو",
+  "faq.catAccount": "الحسابات والتقييمات",
+  "faq.catClinics": "للعيادات والأطباء",
+
+  // Legal pages
+  "privacy.title": "سياسة الخصوصية",
+  "privacy.updated": "آخر تحديث: أكتوبر 2026",
+  "terms.title": "شروط الاستخدام",
+  "legal.demoNote":
+    "هذا مشروع تخرّج للعرض — النص أدناه نموذجي وليس استشارة قانونية.",
+  "legal.back": "← العودة للرئيسية",
+
+  // Blog
+  "blog.title": "مدونة الصحة",
+  "blog.subtitle": "نصائح صحية عملية من فريق MediGuide.",
+  "blog.searchPlaceholder": "ابحث في المقالات…",
+  "blog.allCategories": "الكل",
+  "blog.readMore": "اقرأ المقال →",
+  "blog.minRead": "دقيقة قراءة",
+  "blog.views": "مشاهدة",
+  "blog.by": "بقلم",
+  "blog.related": "مقالات ذات صلة",
+  "blog.none": "لا توجد مقالات.",
+  "blog.backToBlog": "← العودة للمدونة",
+  "blog.notPublished": "هذا المقال غير منشور بعد.",
+  "home.facilitiesTitle": "منشآت مميزة",
+  "home.facilitiesSub": "أماكن موثوقة يثق بها المرضى",
+  "home.testimonialsTitle": "ماذا يقول المرضى",
 };

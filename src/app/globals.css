@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -7,4 +9,89 @@
 
 body {
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ============================================================
+   Dark theme override layer
+   The .dark class is set on <html> from the mg_theme cookie.
+   These unlayered rules re-map the neutral palette globally,
+   so every page (patient + admin) gets dark mode without
+   sprinkling dark: variants on hundreds of elements.
+   Accent colors (teal/sky/amber buttons & badges) are chosen
+   to read well on dark surfaces already.
+   ============================================================ */
+
+.dark body {
+  background-color: #0b1424;
+  color: #e6edf7;
+}
+
+/* Surfaces */
+.dark .bg-white { background-color: #0f1b2d; }
+.dark .bg-white\/95 { background-color: rgba(15, 27, 45, 0.95); }
+.dark .bg-slate-50 { background-color: #101c30; }
+.dark .bg-slate-100 { background-color: #1a2942; }
+.dark .bg-slate-200 { background-color: #23324d; }
+
+/* Borders + dividers + rings */
+.dark .border-slate-100 { border-color: #1b2740; }
+.dark .border-slate-200 { border-color: #23324d; }
+.dark .border-slate-300 { border-color: #2c3d5c; }
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: #1b2740; }
+.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) { border-color: #23324d; }
+.dark .ring-slate-200 { --tw-ring-color: #23324d; }
+.dark .ring-slate-100 { --tw-ring-color: #1b2740; }
+
+/* Text */
+.dark .text-slate-900 { color: #e8eefb; }
+.dark .text-slate-800 { color: #dde6f3; }
+.dark .text-slate-700 { color: #c6d1e2; }
+.dark .text-slate-600 { color: #a3b3c9; }
+.dark .text-slate-500 { color: #8fa1ba; }
+.dark .text-slate-400 { color: #7085a3; }
+.dark .text-slate-300 { color: #5b7090; }
+
+/* Soft accent surfaces */
+.dark .bg-teal-50 { background-color: #0d2f33; }
+.dark .bg-teal-100 { background-color: #114247; }
+.dark .bg-sky-50 { background-color: #0d2740; }
+.dark .bg-sky-100 { background-color: #123a5c; }
+.dark .bg-amber-50 { background-color: #31250d; }
+.dark .bg-amber-100 { background-color: #453514; }
+.dark .bg-rose-50 { background-color: #311219; }
+.dark .bg-rose-100 { background-color: #481b26; }
+.dark .bg-emerald-50 { background-color: #0c2e20; }
+.dark .bg-emerald-100 { background-color: #124333; }
+.dark .bg-violet-100 { background-color: #251a3d; }
+.dark .bg-teal-50\/60 { background-color: rgba(13, 47, 51, 0.6); }
+
+/* Hover states that would otherwise flash light */
+.dark .hover\:bg-slate-50:hover { background-color: #1a2942; }
+.dark .hover\:bg-slate-100:hover { background-color: #23324d; }
+.dark .hover\:bg-teal-50:hover { background-color: #114247; }
+.dark .hover\:bg-emerald-50:hover { background-color: #124333; }
+.dark .hover\:bg-rose-50:hover { background-color: #481b26; }
+.dark .hover\:bg-amber-50:hover { background-color: #453514; }
+.dark .hover\:bg-sky-50:hover { background-color: #123a5c; }
+.dark .focus-within\:bg-white:focus-within { background-color: #0f1b2d; }
+
+/* Form controls */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: #13223a;
+  color: #e8eefb;
+}
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64809f;
+}
+.dark select option {
+  background-color: #13223a;
+  color: #e8eefb;
+}
+
+/* Skeletons */
+.dark .animate-pulse {
+  animation-duration: 2s;
 }

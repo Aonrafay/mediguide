@@ -6,6 +6,12 @@ export const ur: Record<string, string> = {
   "nav.register": "رجسٹر",
   "nav.signOut": "سائن آؤٹ",
   "nav.searchPlaceholder": "ڈاکٹر، سپیشلٹی تلاش کریں…",
+  "nav.blog": "بلاگ",
+  "nav.about": "ہمارے بارے میں",
+  "nav.contact": "رابطہ کریں",
+  "nav.faq": "عام سوالات",
+  "nav.privacy": "پرائیویسی پالیسی",
+  "nav.terms": "شرائط و ضوابط",
   "common.home": "صفحہ اول",
 
   "home.heroTitle": "صحیح علاج تلاش کریں، کہیں بھی",
@@ -130,7 +136,88 @@ export const ur: Record<string, string> = {
     "صحیح علاج تلاش کریں، کہیں بھی۔ ہسپتال، کلینک، میڈیکل کمپلیکس اور لیبارٹریاں — ڈاکٹر پروفائلز اور حاضری/ویڈیو اپائنٹمنٹس کے ساتھ۔",
   "footer.explore": "دیکھیں",
   "footer.browse": "ملک کے مطابق",
+  "footer.company": "کمپنی",
+  "footer.legal": "قانونی",
+  "footer.contactTitle": "رابطہ",
+  "footer.followUs": "ہمیں فالو کریں",
   "footer.aboutTitle": "تعارف",
   "footer.aboutText":
     "MediGuide ایک فائنل ایئر پروجیکٹ ہے جو ملٹی ملک ہیلتھ کیئر ڈائریکٹری اور اپائنٹمنٹ بکنگ دکھاتا ہے۔",
+
+  // About page
+  "about.title": "MediGuide کے بارے میں",
+  "about.subtitle":
+    "عالمی صحت ڈائریکٹری جو مریضوں کو صحیح ہسپتال، کلینک اور ڈاکٹرز سے — ان کی اپنی زبان میں — جوڑتی ہے۔",
+  "about.missionTitle": "ہمارا مشن",
+  "about.missionText":
+    "صحت کی تلاش آسان بنانا: اپنا ملک، شہر اور ضرورت کی نگہداشت چنیں — پھر بکنگ سے پہلے اصل ڈاکٹر پروفائلز، فیس اور اوقات کا موازنہ کریں۔",
+  "about.visionTitle": "ہمارا وژن",
+  "about.visionText":
+    "ایک قابل اعتماد پلیٹ فارم جہاں لاہور، دبئی، استنبول یا کہیں بھی کا مریض منٹوں میں نگہداشت تلاش کرے — حاضری یا ویڈیو، انگریزی، عربی، اردو اور مزید زبانوں میں۔",
+  "about.statsTitle": "اعداد و شمار میں MediGuide",
+  "about.howTitle": "MediGuide کیسے کام کرتا ہے",
+  "about.valuesTitle": "ہماری قدرتیں",
+  "about.value1t": "اعتماد",
+  "about.value1d": "تصدیق شدہ سہولتیں اور نگرانی شدہ ریویو بھرپور معلومات رکھتے ہیں۔",
+  "about.value2t": "رسائی",
+  "about.value2d": "ملٹی لینگویج مع مکمل RTL سپورٹ — سب کے لیے صحت کی معلومات۔",
+  "about.value3t": "لچک",
+  "about.value3d": "حاضری اور ویڈیو مشاورت ساتھ ساتھ، واضح فیس کے ساتھ۔",
+  "about.ctaTitle": "کیا آپ کلینک، ہسپتال یا لیب چلاتے ہیں؟",
+  "about.ctaText": "MediGuide پر لسٹ ہوں اور اپنے شہر کے مریضوں تک پہنچیں۔",
+  "about.ctaButton": "ہماری ٹیم سے رابطہ",
+
+  // Contact page
+  "contact.title": "ہم سے رابطہ",
+  "contact.subtitle":
+    "بکنگ، لسٹنگ یا پارٹنرشپ کے بارے میں سوال؟ پیغام بھیجیں — 1–2 دنوں میں جواب۔",
+  "contact.formTitle": "پیغام بھیجیں",
+  "contact.name": "پورا نام",
+  "contact.email": "ای میل",
+  "contact.phone": "فون (اختیاری)",
+  "contact.subject": "موضوع",
+  "contact.message": "پیغام",
+  "contact.send": "بھیجیں",
+  "contact.sending": "بھیجا جا رہا ہے…",
+  "contact.infoTitle": "براہ راست رابطہ",
+  "contact.emailLabel": "ای میل",
+  "contact.phoneLabel": "فون",
+  "contact.addressLabel": "دفتر",
+  "contact.hoursLabel": "سپورٹ اوقات",
+  "contact.hoursValue": "پیر–ہفتہ، 9:00–18:00",
+  "contact.mapButton": "🗺️ نقشہ دیکھیں",
+  "contact.success": "✅ پیغام بھیج دیا گیا! 1–2 دنوں میں جواب آئے گا۔",
+
+  // FAQ page
+  "faq.title": "عام سوالات",
+  "faq.subtitle": "MediGuide پر نگہداشت تلاش کرنے اور بکنگ کے بارے میں سب کچھ۔",
+  "faq.catBooking": "بکنگ اور اپائنٹمنٹس",
+  "faq.catVideo": "ویڈیو مشاورت",
+  "faq.catAccount": "اکاؤنٹس اور ریویو",
+  "faq.catClinics": "کلینک اور ڈاکٹرز کے لیے",
+
+  // Legal pages
+  "privacy.title": "پرائیویسی پالیسی",
+  "privacy.updated": "آخری اپڈیٹ: اکتوبر 2026",
+  "terms.title": "شرائط و ضوابط",
+  "legal.demoNote":
+    "یہ ایک فائنل ایئر پروجیکٹ ڈیمو ہے — نیچے کا متن نمونہ ہے، قانونی مشورہ نہیں۔",
+  "legal.back": "← صفحہ اول",
+
+  // Blog
+  "blog.title": "صحت بلاگ",
+  "blog.subtitle": "MediGuide ٹیم کی جانب سے عملی صحت کے مشورے۔",
+  "blog.searchPlaceholder": "مضامین تلاش کریں…",
+  "blog.allCategories": "سب",
+  "blog.readMore": "مضمون پڑھیں →",
+  "blog.minRead": "منٹ پڑھیں",
+  "blog.views": "دیکھا گیا",
+  "blog.by": "از",
+  "blog.related": "متعلقہ مضامین",
+  "blog.none": "کوئی مضمون نہیں ملا۔",
+  "blog.backToBlog": "← بلاگ پر واپس",
+  "blog.notPublished": "یہ مضمون ابھی شائع نہیں ہوا۔",
+  "home.facilitiesTitle": "نمایاں سہولتیں",
+  "home.facilitiesSub": "قابل اعتماد جگہیں",
+  "home.testimonialsTitle": "مریض کیا کہتے ہیں",
 };
