@@ -13,6 +13,7 @@ import {
   APPOINTMENT_MODES,
   APPOINTMENT_STATUSES,
   APPOINTMENT_STATUS_LABELS,
+  SLOT_HOLDING_STATUSES,
 } from "@/lib/constants";
 import { formatDateUTC } from "@/lib/utils";
 
@@ -119,14 +120,14 @@ export async function availableSlots(doctorId: string, dateStr: string, mode: st
     generateSlots(w.startTime, w.endTime, w.slotDurationMin)
   );
 
-  // Remove slots already booked (any mode occupies its own slot key)
+  // Remove slots already booked or held (PENDING / APPROVED / CONFIRMED)
   const dayEnd = new Date(date.getTime() + 24 * 60 * 60 * 1000);
   const booked = await db.appointment.findMany({
     where: {
       doctorId,
       date: { gte: date, lt: dayEnd },
       mode,
-      status: { not: "CANCELLED" },
+      status: { in: SLOT_HOLDING_STATUSES },
     },
     select: { timeSlot: true },
   });
@@ -261,7 +262,7 @@ export async function cancelAppointment(formData: FormData) {
   redirect("/account");
 }
 
-/* -------------------------- admin status control -------------------------- */
+/* ------------------------- approval chain (admin) ------------------------- */
 
 export async function updateAppointmentStatus(formData: FormData) {
   // Effective scope: country admins & super-in-country act as that country;
@@ -269,58 +270,108 @@ export async function updateAppointmentStatus(formData: FormData) {
   const scope: AdminScope | null = await getEffectiveScope();
   if (!scope) redirect("/admin/login");
   const id = str(formData, "id");
-  const status = str(formData, "status");
+  const action = str(formData, "action"); // approve | cancel
 
-  if (APPOINTMENT_STATUSES.includes(status as "PENDING")) {
-    const appointment = await db.appointment.findUnique({ where: { id } });
-    if (appointment) {
-      // Country panel may only touch bookings inside its country
-      if (
-        scope.type === "COUNTRY" &&
-        !(await appointmentInScope(scope, id))
-      ) {
-        redirect("/admin/appointments?error=" +
-          encodeURIComponent("This appointment belongs to another country."));
-      }
-      await db.appointment.update({
-        where: { id },
-        data: {
-          status,
-          // Ensure video appointments always have a join link once confirmed
-          ...(status === "CONFIRMED" &&
-          appointment.mode === "VIDEO" &&
-          !appointment.meetingLink
-            ? { meetingLink: `https://meet.jit.si/mediguide-${appointment.id}` }
-            : {}),
-        },
-      });
+  const fail = (message: string) => {
+    redirect("/admin/appointments?error=" + encodeURIComponent(message));
+  };
 
-      // Notify the patient about the status change (best effort)
-      const [doctor, patient] = await Promise.all([
-        db.doctor.findUnique({
-          where: { id: appointment.doctorId },
-          select: { name: true },
-        }),
-        db.user.findUnique({
-          where: { id: appointment.patientId },
-          select: { name: true },
-        }),
-      ]);
-      const when = `${formatDateUTC(appointment.date)} at ${appointment.timeSlot}`;
-      const statusMessages: Record<string, string> = {
-        CONFIRMED: `Your appointment with ${doctor?.name ?? "the doctor"} on ${when} is confirmed ✅`,
-        COMPLETED: `Your visit with ${doctor?.name ?? "the doctor"} on ${when} is marked completed — leave a review! ⭐`,
-        CANCELLED: `Your appointment with ${doctor?.name ?? "the doctor"} on ${when} was cancelled.`,
-        PENDING: `Your appointment with ${doctor?.name ?? "the doctor"} on ${when} is pending again.`,
-      };
-      await notify(
-        appointment.patientId,
-        `Appointment ${APPOINTMENT_STATUS_LABELS[status as "CONFIRMED"].toLowerCase()}`,
-        statusMessages[status] ?? `Your appointment status changed to ${status}.`
-      );
-      void patient;
-    }
+  const appointment = await db.appointment.findUnique({
+    where: { id },
+    include: {
+      doctor: { select: { name: true } },
+      patient: { select: { name: true } },
+    },
+  });
+  if (!appointment) return fail("Appointment not found.");
+
+  // Country panel may only touch bookings inside its country
+  if (scope.type === "COUNTRY" && !(await appointmentInScope(scope, id))) {
+    return fail("This appointment belongs to another country.");
   }
-  revalidatePath("/admin/appointments");
-  redirect("/admin/appointments");
+
+  /* ---- Admin: APPROVE & send to department ---- */
+  if (action === "approve") {
+    if (appointment.status !== "PENDING" && appointment.status !== "RETURNED") {
+      return fail("Only pending or returned bookings can be approved.");
+    }
+    const now = new Date();
+    await db.appointment.update({
+      where: { id },
+      data: {
+        status: "APPROVED",
+        approvedByAdminId: scope.type === "COUNTRY" ? scope.countryId : scope.type === "SUPER" ? "SUPER" : null,
+        approvedAt: now,
+        sentToDepartmentAt: now,
+        departmentNote: null, // clear previous rejection reason on resend
+        departmentDecidedAt: null,
+        // Re-generate video link if a video appointment being (re)sent
+        ...(appointment.mode === "VIDEO" && !appointment.meetingLink
+          ? { meetingLink: `https://meet.jit.si/mediguide-${appointment.id}` }
+          : {}),
+      },
+    });
+
+    const when = `${formatDateUTC(appointment.date)} at ${appointment.timeSlot}`;
+    await notify(
+      appointment.patientId,
+      "Booking approved ✅",
+      `Your appointment with ${appointment.doctor.name} on ${when} was approved and sent to the facility for final confirmation.`
+    );
+    // Notify all department users of that facility
+    const deptUsers = await db.user.findMany({
+      where: { role: "DEPARTMENT", facilityId: appointment.facilityId },
+      select: { id: true },
+    });
+    for (const user of deptUsers) {
+      await notify(
+        user.id,
+        "New booking sent to your facility 📨",
+        `${appointment.patient.name} — ${appointment.doctor.name}, ${when} (${appointment.mode === "VIDEO" ? "video" : "in-person"}). Please confirm.`
+      );
+    }
+    revalidatePath("/admin/appointments");
+    redirect("/admin/appointments");
+  }
+
+  /* ---- Admin: CANCEL ---- */
+  if (action === "cancel") {
+    if (
+      appointment.status === "COMPLETED" ||
+      appointment.status === "CANCELLED"
+    ) {
+      return fail("This appointment is already closed.");
+    }
+    await db.appointment.update({
+      where: { id },
+      data: { status: "CANCELLED" },
+    });
+    await notify(
+      appointment.patientId,
+      "Appointment cancelled",
+      `Your appointment with ${appointment.doctor.name} on ${formatDateUTC(appointment.date)} at ${appointment.timeSlot} was cancelled by MediGuide.`
+    );
+    revalidatePath("/admin/appointments");
+    redirect("/admin/appointments");
+  }
+
+  /* ---- Admin: COMPLETE (kept for direct completion) ---- */
+  if (action === "complete") {
+    if (appointment.status !== "CONFIRMED") {
+      return fail("Only confirmed appointments can be completed.");
+    }
+    await db.appointment.update({
+      where: { id },
+      data: { status: "COMPLETED" },
+    });
+    await notify(
+      appointment.patientId,
+      "Visit completed — leave a review! ⭐",
+      `Your visit with ${appointment.doctor.name} on ${formatDateUTC(appointment.date)} is marked completed.`
+    );
+    revalidatePath("/admin/appointments");
+    redirect("/admin/appointments");
+  }
+
+  return fail("Unknown action.");
 }

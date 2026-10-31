@@ -33,7 +33,9 @@ export function formatDateUTC(date: Date | string) {
 /** Appointment/booking status badge color classes. */
 export const statusColors: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-700",
+  APPROVED: "bg-violet-100 text-violet-700",
   CONFIRMED: "bg-emerald-100 text-emerald-700",
   COMPLETED: "bg-sky-100 text-sky-700",
-  CANCELLED: "bg-rose-100 text-rose-700",
+  RETURNED: "bg-rose-100 text-rose-700",
+  CANCELLED: "bg-slate-200 text-slate-600",
 };

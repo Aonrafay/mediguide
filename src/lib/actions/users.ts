@@ -46,6 +46,8 @@ export async function saveUser(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   // Country assignment — only meaningful for ADMIN accounts
   const assignedCountryId = str(formData, "assignedCountryId");
+  // Facility assignment — only meaningful for DEPARTMENT accounts
+  const assignedFacilityId = str(formData, "facilityId");
 
   await run("/admin/users", async () => {
     if (!name || !email) return "Name and email are required.";
@@ -54,9 +56,21 @@ export async function saveUser(formData: FormData) {
       return "Password must be at least 8 characters.";
 
     const countryId = role === "ADMIN" && assignedCountryId ? assignedCountryId : null;
+    const facilityId = role === "DEPARTMENT" && assignedFacilityId ? assignedFacilityId : null;
+
+    if (role === "DEPARTMENT" && !facilityId) {
+      return "A department account must be linked to a facility.";
+    }
 
     if (id) {
-      const data: Record<string, unknown> = { name, email, role, phone: phone || null, countryId };
+      const data: Record<string, unknown> = {
+        name,
+        email,
+        role,
+        phone: phone || null,
+        countryId,
+        facilityId,
+      };
       if (password) data.passwordHash = await bcrypt.hash(password, 10);
       await db.user.update({ where: { id }, data });
     } else {
@@ -68,6 +82,7 @@ export async function saveUser(formData: FormData) {
           role,
           phone: phone || null,
           countryId,
+          facilityId,
           passwordHash: await bcrypt.hash(password, 10),
         },
       });
@@ -83,6 +98,21 @@ export async function deleteUser(formData: FormData) {
   await run("/admin/users", async () => {
     if (session && id === session.userId)
       return "You cannot delete your own account.";
+
+    const user = await db.user.findUnique({
+      where: { id },
+      include: {
+        _count: { select: { appointments: true, reviews: true, favourites: true, notifications: true } },
+      },
+    });
+    if (!user) return "User not found.";
+
+    // Remove the user's personal data first (FK constraints), then the account
+    await db.review.deleteMany({ where: { patientId: id } });
+    await db.favourite.deleteMany({ where: { patientId: id } });
+    await db.notification.deleteMany({ where: { userId: id } });
+    await db.appointment.deleteMany({ where: { patientId: id } });
+
     await db.user.delete({ where: { id } });
   });
 }

@@ -55,7 +55,7 @@ export default async function AdminAppointmentsPage({
     <div className="space-y-6">
       <PageHeader
         title="Appointments"
-        subtitle={`Bookings inside ${scope.countryName} — confirm, complete or cancel. Video appointments get a Jitsi meeting link.`}
+        subtitle={`Approval chain: patient books → you approve → facility confirms. RETURNED bookings need re-approval or cancellation.`}
       />
 
       <ErrorBanner message={error} />
@@ -126,13 +126,29 @@ export default async function AdminAppointmentsPage({
             <td className="px-4 py-3">
               <div className="flex flex-wrap gap-2 text-xs">
                 {appt.status === "PENDING" && (
-                  <StatusButton id={appt.id} status="CONFIRMED" label="Confirm" green />
+                  <StatusButton id={appt.id} action="approve" label="✔ Approve & Send" green />
+                )}
+                {appt.status === "APPROVED" && (
+                  <span className="rounded-lg bg-violet-50 px-2.5 py-1 font-medium text-violet-700 ring-1 ring-violet-200">
+                    ⏳ Awaiting department
+                  </span>
                 )}
                 {appt.status === "CONFIRMED" && (
-                  <StatusButton id={appt.id} status="COMPLETED" label="Complete" blue />
+                  <StatusButton id={appt.id} action="complete" label="Complete" blue />
                 )}
-                {(appt.status === "PENDING" || appt.status === "CONFIRMED") && (
-                  <StatusButton id={appt.id} status="CANCELLED" label="Cancel" red />
+                {appt.status === "RETURNED" && (
+                  <>
+                    <span className="w-full rounded-lg bg-rose-50 px-2.5 py-1 font-medium text-rose-700">
+                      ↩️ {appt.departmentNote ?? "Returned by department"}
+                    </span>
+                    <StatusButton id={appt.id} action="approve" label="Re-approve & Resend" green />
+                  </>
+                )}
+                {(appt.status === "PENDING" ||
+                  appt.status === "APPROVED" ||
+                  appt.status === "RETURNED" ||
+                  appt.status === "CONFIRMED") && (
+                  <StatusButton id={appt.id} action="cancel" label="Cancel" red />
                 )}
                 {(appt.status === "COMPLETED" || appt.status === "CANCELLED") && (
                   <span className="text-slate-400">No actions</span>
@@ -155,14 +171,14 @@ export default async function AdminAppointmentsPage({
 
 function StatusButton({
   id,
-  status,
+  action,
   label,
   green = false,
   red = false,
   blue = false,
 }: {
   id: string;
-  status: AppointmentStatus;
+  action: string;
   label: string;
   green?: boolean;
   red?: boolean;
@@ -178,7 +194,7 @@ function StatusButton({
   return (
     <form action={updateAppointmentStatus}>
       <input type="hidden" name="id" value={id} />
-      <input type="hidden" name="status" value={status} />
+      <input type="hidden" name="action" value={action} />
       <button
         type="submit"
         className={`rounded-lg px-2.5 py-1 font-medium ring-1 transition ${color}`}

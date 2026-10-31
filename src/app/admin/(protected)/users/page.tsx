@@ -25,11 +25,12 @@ export default async function AdminUsersPage({
   if (scope.type !== "SUPER") redirect("/admin");
 
   const { error } = await searchParams;
-  const [users, countries] = await Promise.all([
+  const [users, countries, facilities] = await Promise.all([
     db.user.findMany({
       orderBy: { createdAt: "desc" },
       include: {
         country: { select: { name: true, code: true } },
+        facility: { select: { name: true, type: { select: { icon: true } } } },
         _count: {
           select: {
             appointments: true,
@@ -39,7 +40,38 @@ export default async function AdminUsersPage({
       },
     }),
     db.country.findMany({ orderBy: { name: "asc" } }),
+    db.facility.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+      include: {
+        type: { select: { icon: true, name: true } },
+        city: { include: { country: { select: { name: true } } } },
+      },
+    }),
   ]);
+
+  /** Facility select shown in user forms (DEPARTMENT accounts get a facility). */
+  function facilityField(defaultFacilityId?: string | null) {
+    return (
+      <Field
+        label="Facility (department accounts)"
+        hint="DEPARTMENT users confirm bookings at this hospital/lab/complex."
+      >
+        <select
+          name="facilityId"
+          defaultValue={defaultFacilityId ?? ""}
+          className={inputClass}
+        >
+          <option value="">— Not a department account —</option>
+          {facilities.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.type.icon} {f.name} — {f.city.name}, {f.city.country.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+    );
+  }
 
   /** Country select shown in the user forms (admins get an assigned country). */
   function countryField(defaultCountryId?: string | null) {
@@ -106,6 +138,7 @@ export default async function AdminUsersPage({
             </Field>
           </FieldRow>
           {countryField()}
+          {facilityField()}
           <Field label="Phone" hint="Optional">
             <input name="phone" className={inputClass} placeholder="+92 300 0000000" />
           </Field>
@@ -144,12 +177,21 @@ export default async function AdminUsersPage({
                 ) : (
                   <span className="font-medium text-violet-700">Global (super)</span>
                 )
+              ) : user.role === "DEPARTMENT" ? (
+                user.facility ? (
+                  <span className="rounded-full bg-sky-600 px-2.5 py-0.5 font-semibold text-white">
+                    {user.facility.type.icon} {user.facility.name}
+                  </span>
+                ) : (
+                  <span className="text-rose-600">⚠ No facility</span>
+                )
               ) : (
                 <span className="text-slate-400">—</span>
               )}
             </td>
             <td className="px-4 py-3 text-xs text-slate-500">
               {user.role === "PATIENT" && `${user._count.appointments} appointment(s) · ${user._count.reviews} review(s)`}
+              {user.role === "DEPARTMENT" && "Confirms bookings for its facility"}
               {user.role === "DOCTOR" && "Doctor profile"}
               {user.role === "ADMIN" && (user.country ? "Own country only" : "Full access")}
             </td>
@@ -192,6 +234,7 @@ export default async function AdminUsersPage({
                     </Field>
                   </FieldRow>
                   {countryField(user.countryId)}
+                  {facilityField(user.facilityId)}
                   <Field label="Phone">
                     <input name="phone" defaultValue={user.phone ?? ""} className={inputClass} />
                   </Field>

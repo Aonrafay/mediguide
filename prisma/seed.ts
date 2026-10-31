@@ -118,6 +118,24 @@ async function main() {
     });
   }
 
+  // ---------- Department account (Lahore General Hospital) ----------
+  const lhrHospital = await db.facility.findFirst({
+    where: { name: "Lahore General Hospital" },
+  });
+  if (lhrHospital) {
+    await db.user.upsert({
+      where: { email: "lhg-dept@mediguide.com" },
+      update: { role: "DEPARTMENT", facilityId: lhrHospital.id },
+      create: {
+        name: "Lahore General — Front Desk",
+        email: "lhg-dept@mediguide.com",
+        passwordHash: await bcrypt.hash("Dept@123", 10),
+        role: "DEPARTMENT",
+        facilityId: lhrHospital.id,
+      },
+    });
+  }
+
   // ---------- Facilities & doctors (demo: Lahore, Karachi, Dubai, Istanbul) ----------
   type FacilitySeed = {
     name: string;
@@ -303,6 +321,75 @@ async function main() {
   await addReview("Dr. Ahmed Hassan", 1, 4, "Great cardiologist, a bit of waiting time but worth it.");
   await addReview("Dr. Sana Iqbal", 2, 5, "The video consultation was smooth and she was very attentive.");
   await addReview("Dr. Ayesha Malik", 0, 4, "Fixed my skin issue quickly. Friendly staff too.");
+
+  // ---------- Demo approval-chain bookings ----------
+  // One PENDING (awaiting admin) and one APPROVED (awaiting department) so
+  // every queue state is visible in demos.
+  const ahmedDoctor = await db.doctor.findFirst({
+    where: { name: "Dr. Ahmed Hassan" },
+  });
+  const ayeshaPatient = await db.user.findUnique({
+    where: { email: "ayesha@test.com" },
+  });
+  if (ahmedDoctor && ayeshaPatient) {
+    // A PENDING booking 5 days out
+    const future = new Date();
+    future.setUTCDate(future.getUTCDate() + 5);
+    const futureDate = new Date(
+      Date.UTC(future.getUTCFullYear(), future.getUTCMonth(), future.getUTCDate())
+    );
+    await db.appointment.upsert({
+      where: {
+        doctorId_date_timeSlot_mode: {
+          doctorId: ahmedDoctor.id,
+          date: futureDate,
+          timeSlot: "10:00",
+          mode: "IN_PERSON",
+        },
+      },
+      update: {},
+      create: {
+        patientId: ayeshaPatient.id,
+        doctorId: ahmedDoctor.id,
+        facilityId: ahmedDoctor.facilityId,
+        date: futureDate,
+        timeSlot: "10:00",
+        mode: "IN_PERSON",
+        status: "PENDING",
+        notes: "First visit — chest discomfort on stairs.",
+      },
+    });
+
+    // An APPROVED booking 3 days out (in Lahore General's department queue)
+    const future2 = new Date();
+    future2.setUTCDate(future2.getUTCDate() + 3);
+    const futureDate2 = new Date(
+      Date.UTC(future2.getUTCFullYear(), future2.getUTCMonth(), future2.getUTCDate())
+    );
+    await db.appointment.upsert({
+      where: {
+        doctorId_date_timeSlot_mode: {
+          doctorId: ahmedDoctor.id,
+          date: futureDate2,
+          timeSlot: "11:00",
+          mode: "IN_PERSON",
+        },
+      },
+      update: { status: "APPROVED" },
+      create: {
+        patientId: ayeshaPatient.id,
+        doctorId: ahmedDoctor.id,
+        facilityId: ahmedDoctor.facilityId,
+        date: futureDate2,
+        timeSlot: "11:00",
+        mode: "IN_PERSON",
+        status: "APPROVED",
+        notes: "Follow-up for blood pressure medication.",
+        approvedAt: new Date(),
+        sentToDepartmentAt: new Date(),
+      },
+    });
+  }
 
   // ---------- Content translations (Arabic + Urdu names) ----------
   // entityType -> entityId lookup helpers use the maps built above.

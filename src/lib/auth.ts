@@ -10,9 +10,11 @@ export type SessionUser = {
   userId: string;
   name: string;
   email: string;
-  role: "ADMIN" | "DOCTOR" | "PATIENT";
+  role: "ADMIN" | "DEPARTMENT" | "DOCTOR" | "PATIENT";
   /** ADMIN scope: null/undefined = super admin (global), string = country admin */
   countryId?: string | null;
+  /** DEPARTMENT scope: the facility this account belongs to */
+  facilityId?: string | null;
 };
 
 function getSecretKey() {
@@ -43,6 +45,7 @@ export async function verifySessionToken(token: string): Promise<SessionUser | n
       email: payload.email as string,
       role: payload.role as SessionUser["role"],
       countryId: (payload.countryId as string | null | undefined) ?? null,
+      facilityId: (payload.facilityId as string | null | undefined) ?? null,
     };
   } catch {
     return null;
@@ -58,10 +61,16 @@ export async function getSession(): Promise<SessionUser | null> {
 }
 
 /** Guard for server components/actions — throws when not logged in as allowed role. */
-export async function requireRole(...roles: SessionUser["role"][]): Promise<SessionUser> {
+export async function requireRole(
+  ...roles: Array<SessionUser["role"] | "DEPARTMENT">
+): Promise<SessionUser> {
   const session = await getSession();
   if (!session) throw new Error("UNAUTHORIZED");
-  if (roles.length > 0 && !roles.includes(session.role)) {
+  if (
+    roles.length > 0 &&
+    !roles.includes(session.role) &&
+    !(roles.includes("DEPARTMENT") && session.role === "DEPARTMENT")
+  ) {
     throw new Error("FORBIDDEN");
   }
   return session;

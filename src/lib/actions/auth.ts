@@ -39,13 +39,21 @@ export async function login(
     userId: user.id,
     name: user.name,
     email: user.email,
-    role: user.role as "ADMIN" | "DOCTOR" | "PATIENT",
+    role: user.role as "ADMIN" | "DEPARTMENT" | "DOCTOR" | "PATIENT",
     countryId: user.countryId,
+    facilityId: user.facilityId,
   });
   await setSessionCookie(token);
 
-  // Send admins to the admin dashboard, everyone else to the home page.
-  redirect(redirectTo || (user.role === "ADMIN" ? "/admin" : "/"));
+  // Route by role: admins to the panel, department to its portal, rest home
+  redirect(
+    redirectTo ||
+      (user.role === "ADMIN"
+        ? "/admin"
+        : user.role === "DEPARTMENT"
+          ? "/department"
+          : "/")
+  );
 }
 
 export async function logout() {

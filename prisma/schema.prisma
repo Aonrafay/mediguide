@@ -17,13 +17,15 @@ model User {
   name         String
   email        String   @unique
   passwordHash String
-  role         String   @default("PATIENT") // ADMIN | DOCTOR | PATIENT
+  role         String   @default("PATIENT") // ADMIN | DEPARTMENT | DOCTOR | PATIENT
   countryId    String? // ADMIN scope: null = super admin (global), set = admin of that country
+  facilityId   String? // DEPARTMENT scope: the facility (hospital/lab/complex) this account belongs to
   phone        String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   country       Country?      @relation(fields: [countryId], references: [id])
+  facility      Facility?     @relation(fields: [facilityId], references: [id])
   doctorProfile Doctor?
   appointments  Appointment[] @relation("PatientAppointments")
   reviews       Review[]
@@ -87,6 +89,7 @@ model Facility {
 
   city         City          @relation(fields: [cityId], references: [id], onDelete: Cascade)
   type         FacilityType  @relation(fields: [typeId], references: [id])
+  departmentUsers User[]     // department portal accounts
   doctors      Doctor[]
   appointments Appointment[]
 
@@ -159,10 +162,18 @@ model Appointment {
   date          DateTime // appointment day (time part unused)
   timeSlot      String   // "09:30"
   mode          String // IN_PERSON | VIDEO
-  status        String   @default("PENDING") // PENDING | CONFIRMED | COMPLETED | CANCELLED
+  status        String   @default("PENDING")
+  // PENDING → APPROVED (MediGuide admin) → CONFIRMED (department) → COMPLETED
+  // RETURNED = department rejected, back to admin queue; CANCELLED = dropped
   notes         String?
   meetingLink   String?  // video consultation link (Jitsi)
   meetingStatus String?  // SCHEDULED | LIVE | ENDED (video only)
+  // Approval-chain fields
+  approvedByAdminId   String? // admin who approved & sent it to the department
+  approvedAt          DateTime?
+  sentToDepartmentAt  DateTime?
+  departmentNote      String? // department note (reject reason / confirmation)
+  departmentDecidedAt DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -172,6 +183,7 @@ model Appointment {
 
   @@index([doctorId, date])
   @@index([patientId])
+  @@index([facilityId, status])
   @@unique([doctorId, date, timeSlot, mode])
 }
 

@@ -25,6 +25,7 @@ type AppointmentRow = {
   status: string;
   notes: string | null;
   meetingLink: string | null;
+  departmentNote: string | null;
   doctorId: string;
   doctor: {
     name: string;
@@ -207,8 +208,26 @@ function AppointmentRow({
   tr: (entityType: string, entityId: string, field: string, fallback: string) => string;
 }) {
   const isVideo = appt.mode === "VIDEO";
-  const canCancel = appt.status === "PENDING" || appt.status === "CONFIRMED";
+  const canCancel =
+    appt.status === "PENDING" ||
+    appt.status === "APPROVED" ||
+    appt.status === "RETURNED";
   const canJoin = isVideo && appt.status === "CONFIRMED" && appt.meetingLink;
+
+  // Approval-chain progress steps
+  const steps = [
+    { label: "Booked", done: true },
+    { label: "Approved", done: appt.status !== "PENDING" },
+    {
+      label: "At Facility",
+      done: ["CONFIRMED", "COMPLETED"].includes(appt.status),
+    },
+    {
+      label: isVideo ? "Link Active" : "Confirmed",
+      done: ["CONFIRMED", "COMPLETED"].includes(appt.status),
+    },
+    { label: "Completed", done: appt.status === "COMPLETED" },
+  ];
 
   return (
     <div
@@ -245,6 +264,35 @@ function AppointmentRow({
           {appt.notes && (
             <p className="mt-1 text-xs text-slate-400">📝 {appt.notes}</p>
           )}
+
+          {/* Approval-chain timeline */}
+          {appt.status !== "CANCELLED" && (
+            <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px]">
+              {steps.map((step, index) => (
+                <span key={step.label} className="flex items-center gap-1.5">
+                  <span
+                    className={`rounded-full px-2 py-0.5 font-medium ${
+                      step.done
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-slate-100 text-slate-400"
+                    }`}
+                  >
+                    {step.done ? "✔" : "○"} {step.label}
+                  </span>
+                  {index < steps.length - 1 && (
+                    <span className="text-slate-300">→</span>
+                  )}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {appt.status === "RETURNED" && appt.departmentNote && (
+            <p className="mt-2 rounded-lg bg-rose-50 px-3 py-1.5 text-xs text-rose-700">
+              ↩️ Facility note: {appt.departmentNote} — MediGuide is arranging an
+              alternative.
+            </p>
+          )}
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-2">
@@ -258,7 +306,7 @@ function AppointmentRow({
               {t("acct.joinCall")}
             </a>
           )}
-          {isVideo && appt.status === "PENDING" && (
+          {isVideo && (appt.status === "PENDING" || appt.status === "APPROVED") && (
             <p className="text-xs text-slate-400">{t("acct.joinHint")}</p>
           )}
           {canCancel && (
