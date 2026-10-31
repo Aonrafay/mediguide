@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireRole } from "@/lib/auth";
+import { getAdminScope, reviewInScope } from "@/lib/adminScope";
 import { db } from "@/lib/db";
 
 /* ------------------------------- helpers -------------------------------- */
@@ -88,12 +89,19 @@ export async function submitReview(
 /* ------------------------- admin review moderation ----------------------- */
 
 export async function setReviewApproval(formData: FormData) {
-  await requireRole("ADMIN");
+  const scope = await getAdminScope();
+  if (!scope) redirect("/admin/login");
   const id = str(formData, "id");
   const approve = str(formData, "approve") === "1";
 
   const review = await db.review.findUnique({ where: { id } });
   if (review) {
+    if (scope.type === "COUNTRY" && !(await reviewInScope(scope, id))) {
+      redirect(
+        "/admin/reviews?error=" +
+          encodeURIComponent("This review belongs to another country.")
+      );
+    }
     await db.review.update({ where: { id }, data: { isApproved: approve } });
     await recomputeDoctorRating(review.doctorId);
     revalidatePath("/admin/reviews");
@@ -102,11 +110,18 @@ export async function setReviewApproval(formData: FormData) {
 }
 
 export async function deleteReview(formData: FormData) {
-  await requireRole("ADMIN");
+  const scope = await getAdminScope();
+  if (!scope) redirect("/admin/login");
   const id = str(formData, "id");
 
   const review = await db.review.findUnique({ where: { id } });
   if (review) {
+    if (scope.type === "COUNTRY" && !(await reviewInScope(scope, id))) {
+      redirect(
+        "/admin/reviews?error=" +
+          encodeURIComponent("This review belongs to another country.")
+      );
+    }
     await db.review.delete({ where: { id } });
     await recomputeDoctorRating(review.doctorId);
     revalidatePath("/admin/reviews");

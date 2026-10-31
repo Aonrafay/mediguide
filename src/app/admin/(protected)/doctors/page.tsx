@@ -11,6 +11,7 @@ import {
   inputClass,
 } from "@/components/admin/table";
 import { deleteDoctor, saveDoctor } from "@/lib/actions/admin";
+import { doctorWhere, getAdminScope } from "@/lib/adminScope";
 import { db } from "@/lib/db";
 import { GENDERS } from "@/lib/constants";
 import { formatFee } from "@/lib/utils";
@@ -164,18 +165,24 @@ function doctorFormFields(
 export default async function DoctorsPage({
   searchParams,
 }: PageProps<"/admin/doctors">) {
+  const scope = await getAdminScope();
+  if (!scope) return null;
+  const scoped = scope.type === "COUNTRY";
+
   const { error, facility, specialty } = await searchParams;
   const facilityFilter = typeof facility === "string" ? facility : undefined;
   const specialtyFilter = typeof specialty === "string" ? specialty : undefined;
 
   const [facilities, specialties, doctors] = await Promise.all([
     db.facility.findMany({
+      where: scoped ? { city: { countryId: scope.countryId } } : {},
       orderBy: { name: "asc" },
       include: { city: { include: { country: true } } },
     }),
     db.specialty.findMany({ orderBy: { name: "asc" } }),
     db.doctor.findMany({
       where: {
+        ...doctorWhere(scope),
         ...(facilityFilter ? { facilityId: facilityFilter } : {}),
         ...(specialtyFilter ? { specialtyId: specialtyFilter } : {}),
       },
@@ -192,7 +199,11 @@ export default async function DoctorsPage({
     <div className="space-y-6">
       <PageHeader
         title="Doctors"
-        subtitle="Doctor profiles belong to a facility and a specialty. Manage timings via Availability."
+        subtitle={
+          scoped
+            ? `Doctors working in ${scope.countryName}'s facilities. Manage timings via Availability.`
+            : "Doctor profiles belong to a facility and a specialty. Manage timings via Availability."
+        }
       >
         <EntityDialog
           title="Add Doctor"

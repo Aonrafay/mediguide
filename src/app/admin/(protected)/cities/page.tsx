@@ -8,6 +8,7 @@ import {
   inputClass,
 } from "@/components/admin/table";
 import { deleteCity, saveCity } from "@/lib/actions/admin";
+import { cityWhere, getAdminScope } from "@/lib/adminScope";
 import { db } from "@/lib/db";
 
 export const metadata = { title: "Cities" };
@@ -16,13 +17,21 @@ export const instant = false;
 export default async function CitiesPage({
   searchParams,
 }: PageProps<"/admin/cities">) {
+  const scope = await getAdminScope();
+  if (!scope) return null;
+  const scoped = scope.type === "COUNTRY";
+
   const { error, country } = await searchParams;
   const countryFilter = typeof country === "string" ? country : undefined;
 
   const [countries, cities] = await Promise.all([
+    // Country admins pick their own country automatically; super picks any
     db.country.findMany({ orderBy: { name: "asc" } }),
     db.city.findMany({
-      where: countryFilter ? { countryId: countryFilter } : undefined,
+      where: {
+        ...cityWhere(scope),
+        ...(countryFilter ? { countryId: countryFilter } : {}),
+      },
       orderBy: [{ country: { name: "asc" } }, { name: "asc" }],
       include: {
         country: { select: { name: true } },
@@ -35,21 +44,35 @@ export default async function CitiesPage({
     <div className="space-y-6">
       <PageHeader
         title="Cities"
-        subtitle="Cities belong to a country — patients filter by country, then city."
+        subtitle={
+          scoped
+            ? `Cities of ${scope.countryName} — patients filter by country, then city.`
+            : "Cities belong to a country — patients filter by country, then city."
+        }
       >
         <EntityDialog title="Add City" action={saveCity} trigger="＋ Add City">
-          <Field label="Country">
-            <select name="countryId" required className={inputClass} defaultValue="">
-              <option value="" disabled>
-                Select a country…
-              </option>
-              {countries.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
+          {scoped ? (
+            // Country admin: fixed to their own country
+            <>
+              <input type="hidden" name="countryId" value={scope.countryId} />
+              <p className="rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-800">
+                Adding to <b>{scope.countryName}</b>
+              </p>
+            </>
+          ) : (
+            <Field label="Country">
+              <select name="countryId" required className={inputClass} defaultValue="">
+                <option value="" disabled>
+                  Select a country…
                 </option>
-              ))}
-            </select>
-          </Field>
+                {countries.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
           <Field label="City name">
             <input name="name" required className={inputClass} placeholder="Lahore" />
           </Field>
@@ -59,32 +82,34 @@ export default async function CitiesPage({
 
       <ErrorBanner message={error} />
 
-      {/* Country filter */}
-      <div className="flex flex-wrap gap-2">
-        <a
-          href="/admin/cities"
-          className={`rounded-full px-3 py-1.5 text-sm font-medium ${
-            !countryFilter
-              ? "bg-teal-600 text-white"
-              : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          All
-        </a>
-        {countries.map((c) => (
+      {/* Country filter — super admin only (country admins see one country) */}
+      {!scoped && (
+        <div className="flex flex-wrap gap-2">
           <a
-            key={c.id}
-            href={`/admin/cities?country=${c.id}`}
+            href="/admin/cities"
             className={`rounded-full px-3 py-1.5 text-sm font-medium ${
-              countryFilter === c.id
+              !countryFilter
                 ? "bg-teal-600 text-white"
                 : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
             }`}
           >
-            {c.name}
+            All
           </a>
-        ))}
-      </div>
+          {countries.map((c) => (
+            <a
+              key={c.id}
+              href={`/admin/cities?country=${c.id}`}
+              className={`rounded-full px-3 py-1.5 text-sm font-medium ${
+                countryFilter === c.id
+                  ? "bg-teal-600 text-white"
+                  : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              {c.name}
+            </a>
+          ))}
+        </div>
+      )}
 
       <Table head={["City", "Country", "Facilities", "Active", "Actions"]}>
         {cities.map((city) => (
@@ -97,20 +122,24 @@ export default async function CitiesPage({
               <div className="flex items-center gap-3">
                 <EntityDialog title={`Edit ${city.name}`} action={saveCity} openLabel="Edit">
                   <input type="hidden" name="id" value={city.id} />
-                  <Field label="Country">
-                    <select
-                      name="countryId"
-                      required
-                      defaultValue={city.countryId}
-                      className={inputClass}
-                    >
-                      {countries.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
+                  {scoped ? (
+                    <input type="hidden" name="countryId" value={city.countryId} />
+                  ) : (
+                    <Field label="Country">
+                      <select
+                        name="countryId"
+                        required
+                        defaultValue={city.countryId}
+                        className={inputClass}
+                      >
+                        {countries.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                  )}
                   <Field label="City name">
                     <input
                       name="name"

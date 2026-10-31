@@ -40,6 +40,7 @@ export async function login(
     name: user.name,
     email: user.email,
     role: user.role as "ADMIN" | "DOCTOR" | "PATIENT",
+    countryId: user.countryId,
   });
   await setSessionCookie(token);
 

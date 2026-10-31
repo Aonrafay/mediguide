@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getSession, requireRole, setSessionCookie, signSession } from "@/lib/auth";
+import { getAdminScope, appointmentInScope } from "@/lib/adminScope";
 import { db } from "@/lib/db";
 import { notify, notifyAdmins } from "@/lib/notifications";
 import {
@@ -262,13 +263,22 @@ export async function cancelAppointment(formData: FormData) {
 /* -------------------------- admin status control -------------------------- */
 
 export async function updateAppointmentStatus(formData: FormData) {
-  await requireRole("ADMIN");
+  const scope = await getAdminScope();
+  if (!scope) redirect("/admin/login");
   const id = str(formData, "id");
   const status = str(formData, "status");
 
   if (APPOINTMENT_STATUSES.includes(status as "PENDING")) {
     const appointment = await db.appointment.findUnique({ where: { id } });
     if (appointment) {
+      // Country admins may only touch bookings inside their country
+      if (
+        scope.type === "COUNTRY" &&
+        !(await appointmentInScope(scope, id))
+      ) {
+        redirect("/admin/appointments?error=" +
+          encodeURIComponent("This appointment belongs to another country."));
+      }
       await db.appointment.update({
         where: { id },
         data: {

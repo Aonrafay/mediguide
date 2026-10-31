@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { requireRole } from "@/lib/auth";
+import { requireAdminScope } from "@/lib/adminScope";
 import { db } from "@/lib/db";
 import { DEFAULT_LOCALE } from "@/lib/i18n/config";
 
@@ -14,7 +14,7 @@ function str(formData: FormData, key: string) {
 /* ------------------------------ languages -------------------------------- */
 
 export async function saveLanguage(formData: FormData) {
-  await requireRole("ADMIN");
+  await requireAdminScope({ superOnly: true });
   const code = str(formData, "code").toLowerCase();
   const name = str(formData, "name");
   const nativeName = str(formData, "nativeName");
@@ -33,7 +33,7 @@ export async function saveLanguage(formData: FormData) {
 }
 
 export async function toggleLanguageActive(formData: FormData) {
-  await requireRole("ADMIN");
+  await requireAdminScope({ superOnly: true });
   const code = str(formData, "code");
   const language = await db.language.findUnique({ where: { code } });
   if (language && code !== DEFAULT_LOCALE) {
@@ -47,7 +47,7 @@ export async function toggleLanguageActive(formData: FormData) {
 }
 
 export async function setDefaultLanguage(formData: FormData) {
-  await requireRole("ADMIN");
+  await requireAdminScope({ superOnly: true });
   const code = str(formData, "code");
   const language = await db.language.findUnique({ where: { code } });
   if (language) {
@@ -62,7 +62,7 @@ export async function setDefaultLanguage(formData: FormData) {
 }
 
 export async function deleteLanguage(formData: FormData) {
-  await requireRole("ADMIN");
+  await requireAdminScope({ superOnly: true });
   const code = str(formData, "id");
 
   await run("/admin/languages", async () => {
@@ -78,7 +78,7 @@ export async function deleteLanguage(formData: FormData) {
 
 /** Upsert one content translation (empty value deletes the row). */
 export async function saveTranslation(formData: FormData) {
-  await requireRole("ADMIN");
+  await requireAdminScope({ superOnly: true });
   const languageCode = str(formData, "lang");
   const entityType = str(formData, "entityType");
   const entityId = str(formData, "entityId");

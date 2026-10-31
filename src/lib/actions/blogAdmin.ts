@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { requireRole } from "@/lib/auth";
+import { requireAdminScope } from "@/lib/adminScope";
 import { db } from "@/lib/db";
 import { slugify } from "@/lib/slugs";
 
@@ -36,7 +36,7 @@ async function run(path: string, mutate: () => Promise<unknown>) {
 }
 
 export async function saveBlogPost(formData: FormData) {
-  await requireRole("ADMIN");
+  await requireAdminScope({ superOnly: true });
   const id = str(formData, "id");
   const title = str(formData, "title");
   const excerpt = str(formData, "excerpt");
@@ -95,7 +95,7 @@ export async function saveBlogPost(formData: FormData) {
 }
 
 export async function deleteBlogPost(formData: FormData) {
-  await requireRole("ADMIN");
+  await requireAdminScope({ superOnly: true });
   const id = str(formData, "id");
   await run("/admin/blog", () => db.blogPost.delete({ where: { id } }));
 }

@@ -31,7 +31,9 @@ export default async function AdminLoginPage({
         <LoginForm redirectTo={typeof next === "string" ? next : undefined} />
 
         <p className="mt-6 text-center text-xs text-slate-400">
-          Default credentials after seeding: admin@mediguide.com / Admin@123
+          Demo accounts after seeding:<br />
+          Super: admin@mediguide.com / Admin@123<br />
+          Pakistan panel: pk-admin@mediguide.com / Admin@123
         </p>
       </div>
     </main>

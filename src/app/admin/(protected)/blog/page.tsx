@@ -12,6 +12,8 @@ import { BLOG_CATEGORIES } from "@/lib/blog";
 import { deleteBlogPost, saveBlogPost } from "@/lib/actions/blogAdmin";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
+import { getAdminScope } from "@/lib/adminScope";
+import { redirect } from "next/navigation";
 
 export const metadata = { title: "Blog" };
 export const instant = false;
@@ -97,7 +99,12 @@ function postFormFields(post?: {
 export default async function AdminBlogPage({
   searchParams,
 }: PageProps<"/admin/blog">) {
+  const scope = await getAdminScope();
+  if (!scope) return null;
+  if (scope.type !== "SUPER") redirect("/admin");
+
   const { error } = await searchParams;
+  void error;
   const posts = await db.blogPost.findMany({
     orderBy: { createdAt: "desc" },
   });

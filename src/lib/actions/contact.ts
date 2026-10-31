@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { notifyAdmins } from "@/lib/notifications";
+import { requireAdminScope } from "@/lib/adminScope";
 import { db } from "@/lib/db";
 
 function str(formData: FormData, key: string) {
@@ -71,7 +72,7 @@ function run(path: string, mutate: () => Promise<unknown>) {
 }
 
 export async function markMessageRead(formData: FormData) {
-  await import("@/lib/auth").then(({ requireRole }) => requireRole("ADMIN"));
+  await requireAdminScope({ superOnly: true });
   const id = str(formData, "id");
   await run("/admin/messages", () =>
     db.contactMessage.update({ where: { id }, data: { isRead: true } })
@@ -79,7 +80,7 @@ export async function markMessageRead(formData: FormData) {
 }
 
 export async function markMessageUnread(formData: FormData) {
-  await import("@/lib/auth").then(({ requireRole }) => requireRole("ADMIN"));
+  await requireAdminScope({ superOnly: true });
   const id = str(formData, "id");
   await run("/admin/messages", () =>
     db.contactMessage.update({ where: { id }, data: { isRead: false } })
@@ -87,7 +88,7 @@ export async function markMessageUnread(formData: FormData) {
 }
 
 export async function deleteMessage(formData: FormData) {
-  await import("@/lib/auth").then(({ requireRole }) => requireRole("ADMIN"));
+  await requireAdminScope({ superOnly: true });
   const id = str(formData, "id");
   await run("/admin/messages", () => db.contactMessage.delete({ where: { id } }));
 }

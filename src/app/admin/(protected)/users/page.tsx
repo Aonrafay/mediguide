@@ -8,9 +8,11 @@ import {
   inputClass,
 } from "@/components/admin/table";
 import { deleteUser, saveUser } from "@/lib/actions/users";
+import { getAdminScope } from "@/lib/adminScope";
 import { db } from "@/lib/db";
 import { ROLES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
+import { redirect } from "next/navigation";
 
 export const metadata = { title: "Users" };
 export const instant = false;
@@ -18,18 +20,49 @@ export const instant = false;
 export default async function AdminUsersPage({
   searchParams,
 }: PageProps<"/admin/users">) {
+  const scope = await getAdminScope();
+  if (!scope) return null;
+  if (scope.type !== "SUPER") redirect("/admin");
+
   const { error } = await searchParams;
-  const users = await db.user.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      _count: {
-        select: {
-          appointments: true,
-          reviews: true,
+  const [users, countries] = await Promise.all([
+    db.user.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        country: { select: { name: true, code: true } },
+        _count: {
+          select: {
+            appointments: true,
+            reviews: true,
+          },
         },
       },
-    },
-  });
+    }),
+    db.country.findMany({ orderBy: { name: "asc" } }),
+  ]);
+
+  /** Country select shown in the user forms (admins get an assigned country). */
+  function countryField(defaultCountryId?: string | null) {
+    return (
+      <Field
+        label="Assigned country (admins)"
+        hint="Country admins see ONLY this country's panel. Leave empty for a super admin."
+      >
+        <select
+          name="assignedCountryId"
+          defaultValue={defaultCountryId ?? ""}
+          className={inputClass}
+        >
+          <option value="">— Super admin (all countries) —</option>
+          {countries.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -72,6 +105,7 @@ export default async function AdminUsersPage({
               />
             </Field>
           </FieldRow>
+          {countryField()}
           <Field label="Phone" hint="Optional">
             <input name="phone" className={inputClass} placeholder="+92 300 0000000" />
           </Field>
@@ -80,7 +114,7 @@ export default async function AdminUsersPage({
 
       <ErrorBanner message={error} />
 
-      <Table head={["User", "Role", "Activity", "Joined", "Actions"]}>
+      <Table head={["User", "Role", "Scope", "Activity", "Joined", "Actions"]}>
         {users.map((user) => (
           <tr key={user.id} className="text-slate-700">
             <td className="px-4 py-3">
@@ -101,10 +135,23 @@ export default async function AdminUsersPage({
                 {user.role}
               </span>
             </td>
+            <td className="px-4 py-3 text-xs">
+              {user.role === "ADMIN" ? (
+                user.country ? (
+                  <span className="rounded-full bg-teal-600 px-2.5 py-0.5 font-semibold text-white">
+                    {user.country.name} panel
+                  </span>
+                ) : (
+                  <span className="font-medium text-violet-700">Global (super)</span>
+                )
+              ) : (
+                <span className="text-slate-400">—</span>
+              )}
+            </td>
             <td className="px-4 py-3 text-xs text-slate-500">
               {user.role === "PATIENT" && `${user._count.appointments} appointment(s) · ${user._count.reviews} review(s)`}
               {user.role === "DOCTOR" && "Doctor profile"}
-              {user.role === "ADMIN" && "Full access"}
+              {user.role === "ADMIN" && (user.country ? "Own country only" : "Full access")}
             </td>
             <td className="px-4 py-3 text-xs">{formatDate(user.createdAt)}</td>
             <td className="px-4 py-3">
@@ -144,6 +191,7 @@ export default async function AdminUsersPage({
                       />
                     </Field>
                   </FieldRow>
+                  {countryField(user.countryId)}
                   <Field label="Phone">
                     <input name="phone" defaultValue={user.phone ?? ""} className={inputClass} />
                   </Field>

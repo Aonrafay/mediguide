@@ -4,7 +4,8 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { requireRole } from "@/lib/auth";
+import { requireAdminScope } from "@/lib/adminScope";
+import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ROLES } from "@/lib/constants";
 
@@ -36,13 +37,15 @@ async function run(path: string, mutate: () => Promise<unknown>) {
 }
 
 export async function saveUser(formData: FormData) {
-  await requireRole("ADMIN");
+  await requireAdminScope({ superOnly: true });
   const id = str(formData, "id");
   const name = str(formData, "name");
   const email = str(formData, "email").toLowerCase();
   const role = str(formData, "role");
   const phone = str(formData, "phone");
   const password = String(formData.get("password") ?? "");
+  // Country assignment — only meaningful for ADMIN accounts
+  const assignedCountryId = str(formData, "assignedCountryId");
 
   await run("/admin/users", async () => {
     if (!name || !email) return "Name and email are required.";
@@ -50,8 +53,10 @@ export async function saveUser(formData: FormData) {
     if (password && password.length < 8)
       return "Password must be at least 8 characters.";
 
+    const countryId = role === "ADMIN" && assignedCountryId ? assignedCountryId : null;
+
     if (id) {
-      const data: Record<string, unknown> = { name, email, role, phone: phone || null };
+      const data: Record<string, unknown> = { name, email, role, phone: phone || null, countryId };
       if (password) data.passwordHash = await bcrypt.hash(password, 10);
       await db.user.update({ where: { id }, data });
     } else {
@@ -62,6 +67,7 @@ export async function saveUser(formData: FormData) {
           email,
           role,
           phone: phone || null,
+          countryId,
           passwordHash: await bcrypt.hash(password, 10),
         },
       });
@@ -70,11 +76,13 @@ export async function saveUser(formData: FormData) {
 }
 
 export async function deleteUser(formData: FormData) {
-  const session = await requireRole("ADMIN");
+  const scope = await requireAdminScope({ superOnly: true });
+  const session = await getSession();
   const id = str(formData, "id");
 
   await run("/admin/users", async () => {
-    if (id === session.userId) return "You cannot delete your own account.";
+    if (session && id === session.userId)
+      return "You cannot delete your own account.";
     await db.user.delete({ where: { id } });
   });
 }
@@ -87,8 +95,8 @@ export async function changeAdminPassword(
   _prev: PasswordState,
   formData: FormData
 ): Promise<PasswordState> {
-  const session = await requireRole("ADMIN").catch(() => null);
-  if (!session) return { error: "Not signed in." };
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") return { error: "Not signed in." };
 
   const current = String(formData.get("current") ?? "");
   const next = String(formData.get("next") ?? "");

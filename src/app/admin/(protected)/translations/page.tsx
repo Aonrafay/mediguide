@@ -5,6 +5,8 @@ import { SubmitButton } from "@/components/admin/ui";
 import { saveTranslation } from "@/lib/actions/i18nAdmin";
 import { db } from "@/lib/db";
 import { directionOf } from "@/lib/i18n/config";
+import { getAdminScope } from "@/lib/adminScope";
+import { redirect } from "next/navigation";
 
 export const metadata = { title: "Translations" };
 export const instant = false;
@@ -20,6 +22,10 @@ const EDITABLE_TYPES = [
 export default async function TranslationsPage({
   searchParams,
 }: PageProps<"/admin/translations">) {
+  const scope = await getAdminScope();
+  if (!scope) return null;
+  if (scope.type !== "SUPER") redirect("/admin");
+
   const sp = await searchParams;
   const error = typeof sp.error === "string" ? sp.error : undefined;
   const langParam = typeof sp.lang === "string" ? sp.lang : "";

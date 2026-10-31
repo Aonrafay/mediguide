@@ -9,7 +9,9 @@ import {
   inputClass,
 } from "@/components/admin/table";
 import { deleteSpecialty, saveSpecialty } from "@/lib/actions/admin";
+import { getAdminScope } from "@/lib/adminScope";
 import { db } from "@/lib/db";
+import { redirect } from "next/navigation";
 
 export const metadata = { title: "Specialties" };
 export const instant = false;
@@ -17,6 +19,10 @@ export const instant = false;
 export default async function SpecialtiesPage({
   searchParams,
 }: PageProps<"/admin/specialties">) {
+  const scope = await getAdminScope();
+  if (!scope) return null;
+  if (scope.type !== "SUPER") redirect("/admin");
+
   const { error } = await searchParams;
   const specialties = await db.specialty.findMany({
     orderBy: { name: "asc" },

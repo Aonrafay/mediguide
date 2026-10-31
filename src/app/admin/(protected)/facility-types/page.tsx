@@ -9,7 +9,9 @@ import {
   inputClass,
 } from "@/components/admin/table";
 import { deleteFacilityType, saveFacilityType } from "@/lib/actions/admin";
+import { getAdminScope } from "@/lib/adminScope";
 import { db } from "@/lib/db";
+import { redirect } from "next/navigation";
 
 export const metadata = { title: "Facility Types" };
 export const instant = false;
@@ -17,6 +19,10 @@ export const instant = false;
 export default async function FacilityTypesPage({
   searchParams,
 }: PageProps<"/admin/facility-types">) {
+  const scope = await getAdminScope();
+  if (!scope) return null;
+  if (scope.type !== "SUPER") redirect("/admin");
+
   const { error } = await searchParams;
   const types = await db.facilityType.findMany({
     orderBy: { name: "asc" },

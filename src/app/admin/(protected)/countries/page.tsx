@@ -9,7 +9,9 @@ import {
   inputClass,
 } from "@/components/admin/table";
 import { deleteCountry, saveCountry } from "@/lib/actions/admin";
+import { getAdminScope } from "@/lib/adminScope";
 import { db } from "@/lib/db";
+import { redirect } from "next/navigation";
 
 export const metadata = { title: "Countries" };
 export const instant = false;
@@ -17,6 +19,11 @@ export const instant = false;
 export default async function CountriesPage({
   searchParams,
 }: PageProps<"/admin/countries">) {
+  // Global hierarchy — super admin only
+  const scope = await getAdminScope();
+  if (!scope) return null;
+  if (scope.type !== "SUPER") redirect("/admin");
+
   const { error } = await searchParams;
   const countries = await db.country.findMany({
     orderBy: { name: "asc" },

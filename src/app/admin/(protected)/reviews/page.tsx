@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ErrorBanner, PageHeader, Table } from "@/components/admin/table";
 import { deleteReview, setReviewApproval } from "@/lib/actions/engagement";
+import { getAdminScope, reviewWhere } from "@/lib/adminScope";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 
@@ -13,6 +14,10 @@ const FILTERS = ["PENDING", "APPROVED", "REJECTED"] as const;
 export default async function AdminReviewsPage({
   searchParams,
 }: PageProps<"/admin/reviews">) {
+  const scope = await getAdminScope();
+  if (!scope) return null;
+  const scoped = scope.type === "COUNTRY";
+
   const { error, filter } = await searchParams;
   const filterValue =
     typeof filter === "string" && FILTERS.includes(filter as "PENDING")
@@ -20,12 +25,12 @@ export default async function AdminReviewsPage({
       : "PENDING";
 
   const reviews = await db.review.findMany({
-    where:
-      filterValue === "PENDING"
+    where: {
+      ...reviewWhere(scope),
+      ...(filterValue === "PENDING"
         ? { isApproved: false }
-        : filterValue === "APPROVED"
-          ? { isApproved: true }
-          : { isApproved: false },
+        : { isApproved: true }),
+    },
     orderBy: { createdAt: "desc" },
     include: {
       patient: { select: { name: true, email: true } },
@@ -33,15 +38,17 @@ export default async function AdminReviewsPage({
     },
   });
 
-  // Rejected reviews are simply deleted, so the REJECTED tab shows unapproved
-  // ones too — but let's keep it simple: PENDING and APPROVED tabs matter.
   void filterValue;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Reviews"
-        subtitle="Moderate patient reviews. Approved reviews count toward the doctor's public rating."
+        subtitle={
+          scoped
+            ? `Moderate reviews written for ${scope.countryName}'s doctors. Approved reviews count toward ratings.`
+            : "Moderate patient reviews. Approved reviews count toward the doctor's public rating."
+        }
       />
 
       <ErrorBanner message={error} />

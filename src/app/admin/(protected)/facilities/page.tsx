@@ -11,6 +11,7 @@ import {
   inputClass,
 } from "@/components/admin/table";
 import { deleteFacility, saveFacility } from "@/lib/actions/admin";
+import { facilityWhere, getAdminScope } from "@/lib/adminScope";
 import { db } from "@/lib/db";
 
 export const metadata = { title: "Facilities" };
@@ -122,14 +123,20 @@ function facilityFormFields(
 export default async function FacilitiesPage({
   searchParams,
 }: PageProps<"/admin/facilities">) {
+  const scope = await getAdminScope();
+  if (!scope) return null;
+  const scoped = scope.type === "COUNTRY";
+
   const { error } = await searchParams;
   const [cities, types, facilities] = await Promise.all([
     db.city.findMany({
+      where: scoped ? { countryId: scope.countryId } : {},
       orderBy: [{ country: { name: "asc" } }, { name: "asc" }],
       include: { country: { select: { name: true } } },
     }),
     db.facilityType.findMany({ orderBy: { name: "asc" } }),
     db.facility.findMany({
+      where: facilityWhere(scope),
       orderBy: { name: "asc" },
       include: {
         city: { include: { country: true } },
@@ -143,7 +150,11 @@ export default async function FacilitiesPage({
     <div className="space-y-6">
       <PageHeader
         title="Facilities"
-        subtitle="Hospitals, clinics, medical complexes and labs inside each city."
+        subtitle={
+          scoped
+            ? `Hospitals, clinics, complexes and labs inside ${scope.countryName}'s cities.`
+            : "Hospitals, clinics, medical complexes and labs inside each city."
+        }
       >
         <EntityDialog
           title="Add Facility"

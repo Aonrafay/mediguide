@@ -6,11 +6,16 @@ import {
   markMessageUnread,
 } from "@/lib/actions/contact";
 import { db } from "@/lib/db";
+import { getAdminScope } from "@/lib/adminScope";
+import { redirect } from "next/navigation";
 
 export const metadata = { title: "Contact Inbox" };
 export const instant = false;
 
 export default async function AdminMessagesPage() {
+  const scope = await getAdminScope();
+  if (!scope) return null;
+  if (scope.type !== "SUPER") redirect("/admin");
   const messages = await db.contactMessage.findMany({
     orderBy: [{ isRead: "asc" }, { createdAt: "desc" }],
   });

@@ -3,29 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const links = [
-  { href: "/admin", label: "Dashboard", icon: "📊" },
-  { href: "/admin/countries", label: "Countries", icon: "🌍" },
-  { href: "/admin/cities", label: "Cities", icon: "🏙️" },
-  { href: "/admin/facility-types", label: "Facility Types", icon: "🏥" },
-  { href: "/admin/facilities", label: "Facilities", icon: "🏢" },
-  { href: "/admin/specialties", label: "Specialties", icon: "🩺" },
-  { href: "/admin/doctors", label: "Doctors", icon: "👨‍⚕️" },
-  { href: "/admin/appointments", label: "Appointments", icon: "📅" },
-  { href: "/admin/reviews", label: "Reviews", icon: "⭐" },
-  { href: "/admin/messages", label: "Contact Inbox", icon: "📨" },
-  { href: "/admin/blog", label: "Blog", icon: "📰" },
-  { href: "/admin/users", label: "Users", icon: "👥" },
-  { href: "/admin/languages", label: "Languages", icon: "🌐" },
-  { href: "/admin/settings", label: "Settings", icon: "⚙️" },
-];
+export type AdminNavItem = { href: string; label: string; icon: string };
 
-export default function AdminNav() {
+export default function AdminNav({ items }: { items: AdminNavItem[] }) {
   const pathname = usePathname();
 
   return (
     <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
-      {links.map((link) => {
+      {items.map((link) => {
         const active =
           link.href === "/admin"
             ? pathname === "/admin"

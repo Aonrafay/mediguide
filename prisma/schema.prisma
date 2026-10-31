@@ -18,10 +18,12 @@ model User {
   email        String   @unique
   passwordHash String
   role         String   @default("PATIENT") // ADMIN | DOCTOR | PATIENT
+  countryId    String? // ADMIN scope: null = super admin (global), set = admin of that country
   phone        String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  country       Country?      @relation(fields: [countryId], references: [id])
   doctorProfile Doctor?
   appointments  Appointment[] @relation("PatientAppointments")
   reviews       Review[]
@@ -39,7 +41,8 @@ model Country {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  cities City[]
+  cities     City[]
+  adminUsers User[]
 }
 
 model City {

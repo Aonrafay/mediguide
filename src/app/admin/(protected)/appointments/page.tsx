@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ErrorBanner, PageHeader, Table } from "@/components/admin/table";
 import { updateAppointmentStatus } from "@/lib/actions/booking";
+import { appointmentWhere, getAdminScope } from "@/lib/adminScope";
 import { db } from "@/lib/db";
 import {
   APPOINTMENT_MODE_LABELS,
@@ -20,6 +21,10 @@ const FILTERS = ["ALL", ...APPOINTMENT_STATUSES] as const;
 export default async function AdminAppointmentsPage({
   searchParams,
 }: PageProps<"/admin/appointments">) {
+  const scope = await getAdminScope();
+  if (!scope) return null;
+  const scoped = scope.type === "COUNTRY";
+
   const { error, status } = await searchParams;
   const statusFilter =
     typeof status === "string" &&
@@ -28,20 +33,27 @@ export default async function AdminAppointmentsPage({
       : "ALL";
 
   const appointments = await db.appointment.findMany({
-    where: statusFilter === "ALL" ? undefined : { status: statusFilter },
+    where: {
+      ...appointmentWhere(scope),
+      ...(statusFilter === "ALL" ? {} : { status: statusFilter }),
+    },
     orderBy: [{ date: "desc" }, { timeSlot: "asc" }],
     include: {
       patient: { select: { name: true, email: true } },
       doctor: { include: { specialty: true } },
-      facility: { select: { name: true } },
+      facility: { select: { name: true, city: { select: { name: true, country: { select: { name: true, code: true } } } } } },
     },
   });
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Appointments"
-        subtitle="Confirm, complete or cancel patient bookings. Video appointments get a Jitsi meeting link."
+        title={scoped ? "Appointments" : "Appointments"}
+        subtitle={
+          scoped
+            ? `Bookings inside ${scope.countryName} — confirm, complete or cancel. Video appointments get a Jitsi meeting link.`
+            : "Confirm, complete or cancel patient bookings. Video appointments get a Jitsi meeting link."
+        }
       />
 
       <ErrorBanner message={error} />
@@ -76,6 +88,7 @@ export default async function AdminAppointmentsPage({
               <p className="font-medium text-slate-900">{appt.doctor.name}</p>
               <p className="text-xs text-slate-400">
                 {appt.doctor.specialty.name} · {appt.facility.name}
+                {!scoped && ` · ${appt.facility.city.name}`}
               </p>
             </td>
             <td className="px-4 py-3">

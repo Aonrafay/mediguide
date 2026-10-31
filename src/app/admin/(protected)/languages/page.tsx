@@ -17,6 +17,8 @@ import {
 } from "@/lib/actions/i18nAdmin";
 import { db } from "@/lib/db";
 import { LOCALE_FLAGS, UI_LOCALES } from "@/lib/i18n/config";
+import { getAdminScope } from "@/lib/adminScope";
+import { redirect } from "next/navigation";
 
 export const metadata = { title: "Languages" };
 export const instant = false;
@@ -24,6 +26,10 @@ export const instant = false;
 export default async function AdminLanguagesPage({
   searchParams,
 }: PageProps<"/admin/languages">) {
+  const scope = await getAdminScope();
+  if (!scope) return null;
+  if (scope.type !== "SUPER") redirect("/admin");
+
   const { error } = await searchParams;
   const languages = await db.language.findMany({
     orderBy: [{ isDefault: "desc" }, { code: "asc" }],

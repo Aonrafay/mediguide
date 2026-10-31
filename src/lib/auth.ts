@@ -11,6 +11,8 @@ export type SessionUser = {
   name: string;
   email: string;
   role: "ADMIN" | "DOCTOR" | "PATIENT";
+  /** ADMIN scope: null/undefined = super admin (global), string = country admin */
+  countryId?: string | null;
 };
 
 function getSecretKey() {
@@ -40,6 +42,7 @@ export async function verifySessionToken(token: string): Promise<SessionUser | n
       name: payload.name as string,
       email: payload.email as string,
       role: payload.role as SessionUser["role"],
+      countryId: (payload.countryId as string | null | undefined) ?? null,
     };
   } catch {
     return null;

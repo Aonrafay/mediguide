@@ -21,12 +21,13 @@ async function main() {
   const passwordHash = await bcrypt.hash("Admin@123", 10);
   await db.user.upsert({
     where: { email: "admin@mediguide.com" },
-    update: { role: "ADMIN" },
+    update: { role: "ADMIN", countryId: null },
     create: {
       name: "MediGuide Admin",
       email: "admin@mediguide.com",
       passwordHash,
       role: "ADMIN",
+      countryId: null, // super admin — sees everything
     },
   });
 
@@ -99,6 +100,22 @@ async function main() {
         create: { name: cityName, countryId: country.id },
       });
     }
+  }
+
+  // ---------- Country admin (Pakistan) ----------
+  const pakistan = await db.country.findUnique({ where: { name: "Pakistan" } });
+  if (pakistan) {
+    await db.user.upsert({
+      where: { email: "pk-admin@mediguide.com" },
+      update: { role: "ADMIN", countryId: pakistan.id },
+      create: {
+        name: "Pakistan Panel Admin",
+        email: "pk-admin@mediguide.com",
+        passwordHash,
+        role: "ADMIN",
+        countryId: pakistan.id,
+      },
+    });
   }
 
   // ---------- Facilities & doctors (demo: Lahore, Karachi, Dubai, Istanbul) ----------

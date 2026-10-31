@@ -3,7 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { requireRole } from "@/lib/auth";
+import {
+  getAdminScope,
+  requireAdminScope,
+  requireCountryAccess,
+  cityInScope,
+  facilityInScope,
+  doctorInScope,
+  ScopeError,
+} from "@/lib/adminScope";
 import { db } from "@/lib/db";
 
 /* ------------------------------- helpers ------------------------------- */
@@ -31,6 +39,11 @@ function bool(formData: FormData, key: string) {
 
 /** Translate driver errors into human-friendly messages. */
 function friendlyError(error: unknown) {
+  if (error instanceof ScopeError) {
+    if (error.message === "FORBIDDEN_GLOBAL_SECTION")
+      return "This section is managed by the super admin only.";
+    return "You do not have permission for this action (other country).";
+  }
   const code =
     typeof error === "object" && error !== null && "code" in error
       ? String((error as { code: unknown }).code)
@@ -60,9 +73,10 @@ async function run(path: string, mutate: () => Promise<unknown>) {
 }
 
 /* ------------------------------- countries ------------------------------ */
+/* Global hierarchy — super admin only.                                     */
 
 export async function saveCountry(formData: FormData) {
-  await requireRole("ADMIN");
+  await requireAdminScope({ superOnly: true });
   const id = optStr(formData, "id");
   const name = str(formData, "name");
   const code = str(formData, "code").toUpperCase();
@@ -78,7 +92,7 @@ export async function saveCountry(formData: FormData) {
 }
 
 export async function deleteCountry(formData: FormData) {
-  await requireRole("ADMIN");
+  await requireAdminScope({ superOnly: true });
   const id = str(formData, "id");
   await run("/admin/countries", () => db.country.delete({ where: { id } }));
 }
@@ -86,7 +100,7 @@ export async function deleteCountry(formData: FormData) {
 /* --------------------------------- cities ------------------------------- */
 
 export async function saveCity(formData: FormData) {
-  await requireRole("ADMIN");
+  const scope = await requireAdminScope();
   const id = optStr(formData, "id");
   const name = str(formData, "name");
   const countryId = str(formData, "countryId");
@@ -94,6 +108,10 @@ export async function saveCity(formData: FormData) {
 
   await run("/admin/cities", async () => {
     if (!name || !countryId) return "City name and country are required.";
+    if (scope.type === "COUNTRY" && scope.countryId !== countryId)
+      return "You can only add cities in your own country.";
+    if (id && !(await cityInScope(scope, id)))
+      return "This city belongs to another country.";
     const data = { name, countryId, isActive };
     if (id) await db.city.update({ where: { id }, data });
     else await db.city.create({ data });
@@ -101,15 +119,20 @@ export async function saveCity(formData: FormData) {
 }
 
 export async function deleteCity(formData: FormData) {
-  await requireRole("ADMIN");
+  const scope = await requireAdminScope();
   const id = str(formData, "id");
-  await run("/admin/cities", () => db.city.delete({ where: { id } }));
+  await run("/admin/cities", async () => {
+    if (!(await cityInScope(scope, id)))
+      return "This city belongs to another country.";
+    await db.city.delete({ where: { id } });
+  });
 }
 
 /* ---------------------------- facility types ---------------------------- */
+/* Global vocabulary — super admin only.                                    */
 
 export async function saveFacilityType(formData: FormData) {
-  await requireRole("ADMIN");
+  await requireAdminScope({ superOnly: true });
   const id = optStr(formData, "id");
   const name = str(formData, "name");
   const icon = optStr(formData, "icon");
@@ -124,7 +147,7 @@ export async function saveFacilityType(formData: FormData) {
 }
 
 export async function deleteFacilityType(formData: FormData) {
-  await requireRole("ADMIN");
+  await requireAdminScope({ superOnly: true });
   const id = str(formData, "id");
   await run("/admin/facility-types", () =>
     db.facilityType.delete({ where: { id } })
@@ -132,9 +155,10 @@ export async function deleteFacilityType(formData: FormData) {
 }
 
 /* ------------------------------ specialties ------------------------------ */
+/* Global vocabulary — super admin only.                                    */
 
 export async function saveSpecialty(formData: FormData) {
-  await requireRole("ADMIN");
+  await requireAdminScope({ superOnly: true });
   const id = optStr(formData, "id");
   const name = str(formData, "name");
   const icon = optStr(formData, "icon");
@@ -150,7 +174,7 @@ export async function saveSpecialty(formData: FormData) {
 }
 
 export async function deleteSpecialty(formData: FormData) {
-  await requireRole("ADMIN");
+  await requireAdminScope({ superOnly: true });
   const id = str(formData, "id");
   await run("/admin/specialties", () => db.specialty.delete({ where: { id } }));
 }
@@ -158,7 +182,7 @@ export async function deleteSpecialty(formData: FormData) {
 /* ------------------------------- facilities ------------------------------ */
 
 export async function saveFacility(formData: FormData) {
-  await requireRole("ADMIN");
+  const scope = await requireAdminScope();
   const id = optStr(formData, "id");
   const name = str(formData, "name");
   const cityId = str(formData, "cityId");
@@ -176,6 +200,10 @@ export async function saveFacility(formData: FormData) {
   await run("/admin/facilities", async () => {
     if (!name || !cityId || !typeId || !address)
       return "Name, city, type and address are required.";
+    if (scope.type === "COUNTRY" && !(await cityInScope(scope, cityId)))
+      return "You can only add facilities in your own country's cities.";
+    if (id && !(await facilityInScope(scope, id)))
+      return "This facility belongs to another country.";
     const data = {
       name,
       cityId,
@@ -193,15 +221,19 @@ export async function saveFacility(formData: FormData) {
 }
 
 export async function deleteFacility(formData: FormData) {
-  await requireRole("ADMIN");
+  const scope = await requireAdminScope();
   const id = str(formData, "id");
-  await run("/admin/facilities", () => db.facility.delete({ where: { id } }));
+  await run("/admin/facilities", async () => {
+    if (!(await facilityInScope(scope, id)))
+      return "This facility belongs to another country.";
+    await db.facility.delete({ where: { id } });
+  });
 }
 
 /* --------------------------------- doctors ------------------------------- */
 
 export async function saveDoctor(formData: FormData) {
-  await requireRole("ADMIN");
+  const scope = await requireAdminScope();
   const id = optStr(formData, "id");
   const name = str(formData, "name");
   const facilityId = str(formData, "facilityId");
@@ -221,6 +253,10 @@ export async function saveDoctor(formData: FormData) {
   await run("/admin/doctors", async () => {
     if (!name || !facilityId || !specialtyId || !qualification)
       return "Name, facility, specialty and qualification are required.";
+    if (scope.type === "COUNTRY" && !(await facilityInScope(scope, facilityId)))
+      return "You can only add doctors to facilities in your own country.";
+    if (id && !(await doctorInScope(scope, id)))
+      return "This doctor belongs to another country.";
     const data = {
       name,
       facilityId,
@@ -241,15 +277,19 @@ export async function saveDoctor(formData: FormData) {
 }
 
 export async function deleteDoctor(formData: FormData) {
-  await requireRole("ADMIN");
+  const scope = await requireAdminScope();
   const id = str(formData, "id");
-  await run("/admin/doctors", () => db.doctor.delete({ where: { id } }));
+  await run("/admin/doctors", async () => {
+    if (!(await doctorInScope(scope, id)))
+      return "This doctor belongs to another country.";
+    await db.doctor.delete({ where: { id } });
+  });
 }
 
 /* ------------------------------ availability ----------------------------- */
 
 export async function saveAvailability(formData: FormData) {
-  await requireRole("ADMIN");
+  const scope = await requireAdminScope();
   const doctorId = str(formData, "doctorId");
   const dayOfWeek = num(formData, "dayOfWeek") ?? 1;
   const startTime = str(formData, "startTime");
@@ -258,6 +298,8 @@ export async function saveAvailability(formData: FormData) {
   const mode = str(formData, "mode") || "BOTH";
 
   await run(`/admin/doctors/${doctorId}/availability`, async () => {
+    if (!(await doctorInScope(scope, doctorId)))
+      return "This doctor belongs to another country.";
     if (!startTime || !endTime) return "Start and end time are required.";
     if (endTime <= startTime) return "End time must be after start time.";
     await db.availability.create({
@@ -267,10 +309,12 @@ export async function saveAvailability(formData: FormData) {
 }
 
 export async function deleteAvailability(formData: FormData) {
-  await requireRole("ADMIN");
+  const scope = await requireAdminScope();
   const id = str(formData, "id");
   const doctorId = str(formData, "doctorId");
-  await run(`/admin/doctors/${doctorId}/availability`, () =>
-    db.availability.delete({ where: { id } })
-  );
+  await run(`/admin/doctors/${doctorId}/availability`, async () => {
+    if (!(await doctorInScope(scope, doctorId)))
+      return "This doctor belongs to another country.";
+    await db.availability.delete({ where: { id } });
+  });
 }
