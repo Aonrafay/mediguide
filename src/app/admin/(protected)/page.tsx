@@ -22,6 +22,8 @@ export const metadata = { title: "Admin Home" };
 export const instant = false;
 
 const GLOBAL_TOOLS = [
+  { href: "/admin/requests", icon: "💼", label: "Service Requests", desc: "Clinics asking for portfolio/social" },
+  { href: "/admin/clients", icon: "🤝", label: "Partner Clients", desc: "Active social-media engagements" },
   { href: "/admin/facility-types", icon: "🏥", label: "Facility Types", desc: "Hospital, Clinic, Complex, Lab" },
   { href: "/admin/specialties", icon: "🩺", label: "Specialties", desc: "Medical specialties list" },
   { href: "/admin/users", icon: "👥", label: "Users", desc: "Accounts & country admins" },
@@ -138,17 +140,20 @@ export default async function AdminHomePage({
 
   /* ================= GLOBAL HOME MODE ================= */
 
-  const [countries, pendingCount, cities, facilities] = await Promise.all([
-    db.country.findMany({
-      orderBy: { name: "asc" },
-      include: { _count: { select: { cities: true } } },
-    }),
-    db.appointment.count({ where: { status: "PENDING" } }),
-    db.city.findMany({ select: { id: true, countryId: true } }),
-    db.facility.findMany({
-      select: { cityId: true, _count: { select: { doctors: true } } },
-    }),
-  ]);
+  const [countries, pendingCount, cities, facilities, serviceRequests, activeClients] =
+    await Promise.all([
+      db.country.findMany({
+        orderBy: { name: "asc" },
+        include: { _count: { select: { cities: true } } },
+      }),
+      db.appointment.count({ where: { status: "PENDING" } }),
+      db.city.findMany({ select: { id: true, countryId: true } }),
+      db.facility.findMany({
+        select: { cityId: true, planTier: true, _count: { select: { doctors: true } } },
+      }),
+      db.serviceRequest.count({ where: { status: "NEW" } }),
+      db.clientService.count({ where: { isActive: true } }),
+    ]);
 
   // Per-country rollups: facilities & doctors counts
   const cityCountry = new Map(cities.map((c) => [c.id, c.countryId]));
@@ -178,6 +183,17 @@ export default async function AdminHomePage({
       </div>
 
       <ErrorBanner message={typeof error === "string" ? error : undefined} />
+
+      {/* Partner services alerts */}
+      {serviceRequests > 0 && (
+        <Link
+          href="/admin/requests"
+          className="block rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm font-medium text-violet-800 transition hover:bg-violet-100"
+        >
+          💼 {serviceRequests} new partner service request{serviceRequests === 1 ? "" : "s"} —
+          review now →
+        </Link>
+      )}
 
       {pendingCount > 0 && (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
@@ -293,8 +309,7 @@ export default async function AdminHomePage({
           Platform-wide settings — shared by every country
         </p>
         <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {GLOBAL_TOOLS.map((tool) => (
-            <Link
+          {GLOBAL_TOOLS.map((tool) => (            <Link
               key={tool.href}
               href={tool.href}
               className="rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-teal-300 hover:shadow-md"

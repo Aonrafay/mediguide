@@ -15,6 +15,8 @@ export const instant = false;
 /** Super admin, Global Home — platform tools only (countries live on the home page). */
 const GLOBAL_ITEMS: AdminNavItem[] = [
   { href: "/admin", label: "Admin Home", icon: "🏠" },
+  { href: "/admin/requests", label: "Service Requests", icon: "💼" },
+  { href: "/admin/clients", label: "Partner Clients", icon: "🤝" },
   { href: "/admin/facility-types", label: "Facility Types", icon: "🏥" },
   { href: "/admin/specialties", label: "Specialties", icon: "🩺" },
   { href: "/admin/users", label: "Users", icon: "👥" },

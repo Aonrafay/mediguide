@@ -168,6 +168,14 @@ export default async function FacilityPage({ params }: Props) {
                 {t("facility.openMaps")}
               </a>
             )}
+            {facility.planTier !== "NONE" && (
+              <Link
+                href={`/portfolio/${facility.id}`}
+                className="mt-3 block rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-center text-sm font-bold text-amber-700 transition hover:bg-amber-100"
+              >
+                {t("pf.viewPortfolio")}
+              </Link>
+            )}
           </div>
 
           {images.length > 0 && (

@@ -599,6 +599,134 @@ async function main() {
     });
   }
 
+  // ---------- Partner services: packages, showcase client, social log ----------
+  const packageDefs = [
+    {
+      name: "Basic — Portfolio Page",
+      tier: "BASIC",
+      description: "A professional portfolio page on MediGuide showcasing your facility, team and services.",
+      features: ["Rich portfolio page", "Photo gallery", "Services & hours section", "Doctor team section", "Patient reviews display"],
+      platforms: ["website"],
+      priceLabel: "Rs 8,000 / year",
+      sortOrder: 1,
+    },
+    {
+      name: "Pro — Page + Social Setup",
+      tier: "PRO",
+      description: "Portfolio page plus professional setup of your Instagram, LinkedIn, X and Facebook pages.",
+      features: ["Everything in Basic", "4 social pages created & branded", "Profile & cover design", "Bio and contact links", "First 3 posts published"],
+      platforms: ["instagram", "linkedin", "x", "facebook", "website"],
+      priceLabel: "Rs 15,000 / 3 months",
+      sortOrder: 2,
+    },
+    {
+      name: "Premium — Full Monthly Handling",
+      tier: "PREMIUM",
+      description: "We run your pages for you: content calendar, posts every week, replies and monthly growth report.",
+      features: ["Everything in Pro", "Weekly posts on all platforms", "Content calendar & planning", "Comment & message handling", "Monthly performance report"],
+      platforms: ["instagram", "linkedin", "x", "facebook", "website"],
+      priceLabel: "Rs 25,000 / month",
+      sortOrder: 3,
+    },
+  ];
+  const packageMap = new Map<string, string>();
+  for (const pkg of packageDefs) {
+    const created = await db.servicePackage.upsert({
+      where: { name: pkg.name },
+      update: {},
+      create: {
+        ...pkg,
+        features: JSON.stringify(pkg.features),
+        platforms: JSON.stringify(pkg.platforms),
+      },
+    });
+    packageMap.set(pkg.tier, created.id);
+  }
+
+  // Showcase client: Lahore General Hospital becomes a PRO portfolio client
+  const showcase = await db.facility.findFirst({
+    where: { name: "Lahore General Hospital" },
+  });
+  if (showcase) {
+    await db.facility.update({
+      where: { id: showcase.id },
+      data: {
+        planTier: "PRO",
+        portfolioTagline: "Advanced cardiac and general care in the heart of Lahore — trusted by families for over 25 years.",
+        portfolioServices: JSON.stringify([
+          "Cardiology & Heart Screenings",
+          "Pediatric Care & Vaccination",
+          "Orthopedic Surgery & Physiotherapy",
+          "24/7 Emergency Department",
+        ]),
+        openingHours: "Mon–Sat 9:00–21:00 · Emergency 24/7",
+        socials: JSON.stringify({
+          instagram: "https://instagram.com/lahoregeneral",
+          linkedin: "https://linkedin.com/company/lahoregeneral",
+          x: "https://x.com/lahoregeneral",
+          facebook: "https://facebook.com/lahoregeneral",
+          website: "https://lahoregeneral.example.com",
+        }),
+        images: JSON.stringify([
+          "https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?w=800",
+          "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800",
+          "https://images.unsplash.com/photo-1516574187841-cb20cc0fef98?w=800",
+        ]),
+      },
+    });
+
+    const clientService = await db.clientService.upsert({
+      where: { facilityId: showcase.id },
+      update: {},
+      create: {
+        facilityId: showcase.id,
+        planTier: "PRO",
+        platforms: JSON.stringify(["instagram", "linkedin", "x", "facebook"]),
+        monthlyFee: 15000,
+      },
+    });
+
+    const posts = [
+      { platform: "instagram", content: "❤️ Free heart-screening camp this Sunday at Lahore General Hospital. Walk in between 9am–2pm — no appointment needed!", status: "POSTED", url: "https://instagram.com/p/demo1" },
+      { platform: "facebook", content: "Meet Dr. Ahmed Hassan — 14 years of cardiology experience, now booking both in-person and video consultations through MediGuide.", status: "POSTED", url: "https://facebook.com/lahoregeneral/posts/2" },
+      { platform: "linkedin", content: "Proud moment: our cardiology team completed 500+ successful procedures this year. Read the full story on our page.", status: "PLANNED" },
+      { platform: "x", content: "Flu season is here 🤧 Rest, fluids, and when to see a doctor — full guide on our MediGuide portfolio page.", status: "PLANNED" },
+    ];
+    for (const post of posts) {
+      const existing = await db.socialPost.findFirst({
+        where: { clientServiceId: clientService.id, content: post.content },
+      });
+      if (!existing) {
+        await db.socialPost.create({
+          data: {
+            clientServiceId: clientService.id,
+            platform: post.platform,
+            content: post.content,
+            status: post.status,
+            postedAt: post.status === "POSTED" ? new Date() : null,
+            postUrl: post.url ?? null,
+          },
+        });
+      }
+    }
+  }
+
+  // Demo service request from the dental clinic (matches the contact inbox story)
+  await db.serviceRequest.upsert({
+    where: { id: "demo-request" },
+    update: {},
+    create: {
+      id: "demo-request",
+      businessName: "City Care Dental — Multan Branch",
+      contactPerson: "Dr. Kamran Ali",
+      email: "kamran@clinic.com",
+      phone: "+92 300 1234567",
+      packageId: packageMap.get("PREMIUM") ?? null,
+      message: "We want the full monthly handling — Instagram and Facebook mainly, plus a portfolio page showing our implant work.",
+      status: "NEW",
+    },
+  });
+
   // ---------- Languages ----------
   const langs = [
     { code: "en", name: "English", nativeName: "English", direction: "ltr", isDefault: true },

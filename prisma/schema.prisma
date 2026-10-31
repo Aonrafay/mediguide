@@ -84,6 +84,12 @@ model Facility {
   isActive    Boolean  @default(true)
   cityId      String
   typeId      String
+  // Portfolio & partner-services fields (Phase 12)
+  planTier          String  @default("NONE") // NONE | BASIC | PRO | PREMIUM
+  portfolioTagline  String?
+  portfolioServices String  @default("[]") // JSON array of service strings
+  openingHours      String? // free text, e.g. "Mon–Sat 9:00–21:00"
+  socials           String  @default("{}") // JSON {instagram,x,linkedin,facebook,website}
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -92,6 +98,8 @@ model Facility {
   departmentUsers User[]     // department portal accounts
   doctors      Doctor[]
   appointments Appointment[]
+  clientService ClientService?
+  serviceRequests ServiceRequest[]
 
   @@index([cityId, typeId])
 }
@@ -278,4 +286,70 @@ model ContactMessage {
   createdAt DateTime @default(now())
 
   @@index([isRead])
+}
+
+/* ---------------------- Partner services (Phase 12) ---------------------- */
+
+model ServicePackage {
+  id          String  @id @default(cuid())
+  name        String  @unique // e.g. "Basic — Portfolio Page"
+  tier        String // BASIC | PRO | PREMIUM | CUSTOM
+  description String
+  features    String  @default("[]") // JSON array of feature strings
+  platforms   String  @default("[]") // JSON array: instagram, linkedin, x, facebook, website
+  priceLabel  String // display string, e.g. "Rs 15,000 / month"
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  requests ServiceRequest[]
+}
+
+model ServiceRequest {
+  id            String   @id @default(cuid())
+  businessName  String
+  contactPerson String
+  email         String
+  phone         String?
+  facilityId    String? // optional link to an existing facility
+  packageId     String?  // requested plan
+  message       String?
+  status        String   @default("NEW") // NEW | CONTACTED | ACTIVE | REJECTED
+  createdAt     DateTime @default(now())
+
+  package ServicePackage? @relation(fields: [packageId], references: [id])
+  facility Facility? @relation(fields: [facilityId], references: [id])
+  clientService ClientService?
+
+  @@index([status])
+}
+
+model ClientService {
+  id          String   @id @default(cuid())
+  facilityId  String   @unique
+  requestId   String?  @unique
+  planTier    String // BASIC | PRO | PREMIUM
+  platforms   String   @default("[]") // JSON array we handle for them
+  monthlyFee  Float    @default(0)
+  startedAt   DateTime @default(now())
+  isActive    Boolean  @default(true)
+
+  facility Facility      @relation(fields: [facilityId], references: [id])
+  request  ServiceRequest? @relation(fields: [requestId], references: [id])
+  posts    SocialPost[]
+}
+
+model SocialPost {
+  id            String   @id @default(cuid())
+  clientServiceId String
+  platform      String // instagram | linkedin | x | facebook | website
+  content       String
+  scheduledFor  DateTime?
+  status        String   @default("PLANNED") // PLANNED | POSTED
+  postedAt      DateTime?
+  postUrl       String?
+  createdAt     DateTime @default(now())
+
+  clientService ClientService @relation(fields: [clientServiceId], references: [id], onDelete: Cascade)
+
+  @@index([clientServiceId, status])
 }

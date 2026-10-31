@@ -236,4 +236,46 @@ export const en: Record<string, string> = {
   "home.facilitiesTitle": "Featured facilities",
   "home.facilitiesSub": "Verified places patients trust",
   "home.testimonialsTitle": "What patients say",
+
+  // Partner services (Phase 12)
+  "nav.forClinics": "For Clinics",
+  "svc.heroTitle": "We build your digital presence — you focus on patients",
+  "svc.heroSub":
+    "Portfolio pages, social media setup and full monthly handling of your Instagram, LinkedIn, X and Facebook — made for hospitals, clinics, labs and doctors.",
+  "svc.catalogTitle": "Service packages",
+  "svc.plansTitle": "Choose your plan",
+  "svc.requestTitle": "Request a service",
+  "svc.requestSub":
+    "Tell us about your practice — our partnerships team will contact you within 1–2 working days.",
+  "svc.business": "Business / facility name",
+  "svc.person": "Contact person",
+  "svc.email": "Email",
+  "svc.phone": "Phone",
+  "svc.facility": "Your facility (if listed on MediGuide)",
+  "svc.noFacility": "Not listed yet — create it for me",
+  "svc.plan": "Plan of interest",
+  "svc.msgLabel": "What do you need? (optional)",
+  "svc.submit": "Send request",
+  "svc.sending": "Sending…",
+  "svc.success":
+    "✅ Request received! Our partnerships team will contact you within 1–2 working days.",
+  "svc.platforms": "Platforms we cover",
+  "svc.worksTitle": "How it works",
+  "svc.w1t": "1. You request",
+  "svc.w1d": "Pick a plan and tell us about your practice through the form below.",
+  "svc.w2t": "2. We build",
+  "svc.w2d": "Our team creates your portfolio page and branded social accounts.",
+  "svc.w3t": "3. We grow",
+  "svc.w3d": "Weekly posts, comment handling and monthly reports — you just treat patients.",
+  "svc.portfolioBadge": "Featured client",
+
+  // Portfolio page
+  "pf.hours": "Opening hours",
+  "pf.servicesTitle": "Our services",
+  "pf.team": "Meet our doctors",
+  "pf.bookWith": "Book with our doctors",
+  "pf.followUs": "Follow us",
+  "pf.website": "Website",
+  "pf.viewPortfolio": "View full portfolio →",
+  "pf.reviews": "Patient reviews",
 };

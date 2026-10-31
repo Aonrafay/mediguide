@@ -11,6 +11,7 @@ import {
   inputClass,
 } from "@/components/admin/table";
 import { deleteFacility, saveFacility } from "@/lib/actions/admin";
+import { savePortfolio } from "@/lib/actions/partner";
 import { facilityWhere, type AdminScope } from "@/lib/adminScope";
 import { requireCountryView } from "@/lib/adminContext";
 import { db } from "@/lib/db";
@@ -150,9 +151,7 @@ export default async function FacilitiesPage({
         _count: { select: { doctors: true } },
       },
     }),
-  ]);
-
-  return (
+  ]);  return (
     <div className="space-y-6">
       <PageHeader
         title="Facilities"
@@ -204,6 +203,14 @@ export default async function FacilitiesPage({
                 >
                   {facilityFormFields(cities, types, facility)}
                 </EntityDialog>
+                <EntityDialog
+                  title={`Portfolio — ${facility.name}`}
+                  action={savePortfolio}
+                  openLabel="🎨"
+                  wide
+                >
+                  <PortfolioFields facility={facility} />
+                </EntityDialog>
                 <DeleteButton
                   action={deleteFacility}
                   id={facility.id}
@@ -215,5 +222,107 @@ export default async function FacilitiesPage({
         ))}
       </Table>
     </div>
+  );
+}
+
+/* --------------------------- portfolio editor form ------------------------- */
+
+function PortfolioFields({
+  facility,
+}: {
+  facility: {
+    id: string;
+    name: string;
+    planTier: string;
+    portfolioTagline: string | null;
+    portfolioServices: string;
+    openingHours: string | null;
+    images: string;
+    socials: string;
+  };
+}) {
+  let servicesValue = "";
+  let galleryValue = "";
+  let socials: Record<string, string> = {};
+  try {
+    servicesValue = (JSON.parse(facility.portfolioServices) as string[]).join("\n");
+  } catch {
+    servicesValue = "";
+  }
+  try {
+    galleryValue = (JSON.parse(facility.images) as string[]).join(", ");
+  } catch {
+    galleryValue = "";
+  }
+  try {
+    socials = JSON.parse(facility.socials) as Record<string, string>;
+  } catch {
+    socials = {};
+  }
+
+  return (
+    <>
+      <input type="hidden" name="facilityId" value={facility.id} />
+      <Field label="Portfolio tagline" hint="One line shown big on the portfolio page">
+        <input
+          name="tagline"
+          defaultValue={facility.portfolioTagline ?? ""}
+          className={inputClass}
+          placeholder="Advanced cardiac care in the heart of Lahore"
+        />
+      </Field>
+      <Field label="Services list" hint="One service per line">
+        <textarea
+          name="services"
+          rows={4}
+          defaultValue={servicesValue}
+          className={inputClass}
+          placeholder={"Cardiology & Heart Screenings\nPediatric Care"}
+        />
+      </Field>
+      <Field label="Opening hours">
+        <input
+          name="openingHours"
+          defaultValue={facility.openingHours ?? ""}
+          className={inputClass}
+          placeholder="Mon–Sat 9:00–21:00 · Emergency 24/7"
+        />
+      </Field>
+      <Field label="Gallery image URLs" hint="Comma-separated (2–3 works best)">
+        <input name="gallery" defaultValue={galleryValue} className={inputClass} />
+      </Field>
+      <FieldRow>
+        <Field label="Plan tier">
+          <select name="planTier" defaultValue={facility.planTier} className={inputClass}>
+            <option value="NONE">None (no portfolio badge)</option>
+            <option value="BASIC">Basic</option>
+            <option value="PRO">Pro</option>
+            <option value="PREMIUM">Premium</option>
+          </select>
+        </Field>
+      </FieldRow>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+        Social links (empty = hidden)
+      </p>
+      <FieldRow>
+        <Field label="Instagram URL">
+          <input name="social_instagram" defaultValue={socials.instagram ?? ""} className={inputClass} />
+        </Field>
+        <Field label="LinkedIn URL">
+          <input name="social_linkedin" defaultValue={socials.linkedin ?? ""} className={inputClass} />
+        </Field>
+      </FieldRow>
+      <FieldRow>
+        <Field label="X (Twitter) URL">
+          <input name="social_x" defaultValue={socials.x ?? ""} className={inputClass} />
+        </Field>
+        <Field label="Facebook URL">
+          <input name="social_facebook" defaultValue={socials.facebook ?? ""} className={inputClass} />
+        </Field>
+      </FieldRow>
+      <Field label="Website URL">
+        <input name="social_website" defaultValue={socials.website ?? ""} className={inputClass} />
+      </Field>
+    </>
   );
 }

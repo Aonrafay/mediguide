@@ -21,6 +21,7 @@ export default async function PatientFooter() {
       title: t("footer.company"),
       links: [
         { href: "/about", label: t("nav.about") },
+        { href: "/services", label: t("nav.forClinics") },
         { href: "/contact", label: t("nav.contact") },
         { href: "/faq", label: t("nav.faq") },
       ],
