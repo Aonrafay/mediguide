@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getSession, requireRole, setSessionCookie, signSession } from "@/lib/auth";
-import { getAdminScope, appointmentInScope } from "@/lib/adminScope";
+import { appointmentInScope, type AdminScope } from "@/lib/adminScope";
+import { getEffectiveScope } from "@/lib/adminContext";
 import { db } from "@/lib/db";
 import { notify, notifyAdmins } from "@/lib/notifications";
 import {
@@ -263,7 +264,9 @@ export async function cancelAppointment(formData: FormData) {
 /* -------------------------- admin status control -------------------------- */
 
 export async function updateAppointmentStatus(formData: FormData) {
-  const scope = await getAdminScope();
+  // Effective scope: country admins & super-in-country act as that country;
+  // super-in-global (no panel open) passes as SUPER.
+  const scope: AdminScope | null = await getEffectiveScope();
   if (!scope) redirect("/admin/login");
   const id = str(formData, "id");
   const status = str(formData, "status");
@@ -271,7 +274,7 @@ export async function updateAppointmentStatus(formData: FormData) {
   if (APPOINTMENT_STATUSES.includes(status as "PENDING")) {
     const appointment = await db.appointment.findUnique({ where: { id } });
     if (appointment) {
-      // Country admins may only touch bookings inside their country
+      // Country panel may only touch bookings inside its country
       if (
         scope.type === "COUNTRY" &&
         !(await appointmentInScope(scope, id))

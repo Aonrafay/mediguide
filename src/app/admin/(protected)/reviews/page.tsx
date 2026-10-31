@@ -2,7 +2,8 @@ import Link from "next/link";
 
 import { ErrorBanner, PageHeader, Table } from "@/components/admin/table";
 import { deleteReview, setReviewApproval } from "@/lib/actions/engagement";
-import { getAdminScope, reviewWhere } from "@/lib/adminScope";
+import { reviewWhere, type AdminScope } from "@/lib/adminScope";
+import { requireCountryView } from "@/lib/adminContext";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 
@@ -14,9 +15,14 @@ const FILTERS = ["PENDING", "APPROVED", "REJECTED"] as const;
 export default async function AdminReviewsPage({
   searchParams,
 }: PageProps<"/admin/reviews">) {
-  const scope = await getAdminScope();
-  if (!scope) return null;
-  const scoped = scope.type === "COUNTRY";
+  // Drill-down: requires an open country panel
+  const ctx = await requireCountryView();
+  const scope: AdminScope = {
+    type: "COUNTRY",
+    countryId: ctx.countryId,
+    countryName: ctx.countryName,
+    countryCode: ctx.countryCode,
+  };
 
   const { error, filter } = await searchParams;
   const filterValue =
@@ -44,11 +50,7 @@ export default async function AdminReviewsPage({
     <div className="space-y-6">
       <PageHeader
         title="Reviews"
-        subtitle={
-          scoped
-            ? `Moderate reviews written for ${scope.countryName}'s doctors. Approved reviews count toward ratings.`
-            : "Moderate patient reviews. Approved reviews count toward the doctor's public rating."
-        }
+        subtitle={`Moderate reviews written for ${scope.countryName}'s doctors. Approved reviews count toward ratings.`}
       />
 
       <ErrorBanner message={error} />

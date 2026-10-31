@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireRole } from "@/lib/auth";
-import { getAdminScope, reviewInScope } from "@/lib/adminScope";
+import { reviewInScope, type AdminScope } from "@/lib/adminScope";
+import { getEffectiveScope } from "@/lib/adminContext";
 import { db } from "@/lib/db";
 
 /* ------------------------------- helpers -------------------------------- */
@@ -89,7 +90,7 @@ export async function submitReview(
 /* ------------------------- admin review moderation ----------------------- */
 
 export async function setReviewApproval(formData: FormData) {
-  const scope = await getAdminScope();
+  const scope: AdminScope | null = await getEffectiveScope();
   if (!scope) redirect("/admin/login");
   const id = str(formData, "id");
   const approve = str(formData, "approve") === "1";
@@ -110,7 +111,7 @@ export async function setReviewApproval(formData: FormData) {
 }
 
 export async function deleteReview(formData: FormData) {
-  const scope = await getAdminScope();
+  const scope: AdminScope | null = await getEffectiveScope();
   if (!scope) redirect("/admin/login");
   const id = str(formData, "id");
 

@@ -11,7 +11,8 @@ import {
   inputClass,
 } from "@/components/admin/table";
 import { deleteAvailability, saveAvailability } from "@/lib/actions/admin";
-import { getAdminScope, doctorInScope } from "@/lib/adminScope";
+import { doctorInScope, type AdminScope } from "@/lib/adminScope";
+import { requireCountryView } from "@/lib/adminContext";
 import { db } from "@/lib/db";
 import { AVAILABILITY_MODE_LABELS, AVAILABILITY_MODES, WEEKDAYS } from "@/lib/constants";
 
@@ -25,11 +26,16 @@ export default async function AvailabilityPage({
   const { id } = await params;
   const { error } = await searchParams;
 
-  const scope = await getAdminScope();
-  if (!scope) return null;
+  const scope = await requireCountryView();
+  const adminScope: AdminScope = {
+    type: "COUNTRY",
+    countryId: scope.countryId,
+    countryName: scope.countryName,
+    countryCode: scope.countryCode,
+  };
 
-  // Country admins cannot open another country's doctor
-  if (!(await doctorInScope(scope, id))) notFound();
+  // Cannot open another country's doctor
+  if (!(await doctorInScope(adminScope, id))) notFound();
 
   const doctor = await db.doctor.findUnique({
     where: { id },

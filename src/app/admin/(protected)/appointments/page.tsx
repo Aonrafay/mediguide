@@ -2,7 +2,8 @@ import Link from "next/link";
 
 import { ErrorBanner, PageHeader, Table } from "@/components/admin/table";
 import { updateAppointmentStatus } from "@/lib/actions/booking";
-import { appointmentWhere, getAdminScope } from "@/lib/adminScope";
+import { appointmentWhere, type AdminScope } from "@/lib/adminScope";
+import { requireCountryView } from "@/lib/adminContext";
 import { db } from "@/lib/db";
 import {
   APPOINTMENT_MODE_LABELS,
@@ -21,9 +22,14 @@ const FILTERS = ["ALL", ...APPOINTMENT_STATUSES] as const;
 export default async function AdminAppointmentsPage({
   searchParams,
 }: PageProps<"/admin/appointments">) {
-  const scope = await getAdminScope();
-  if (!scope) return null;
-  const scoped = scope.type === "COUNTRY";
+  // Drill-down: requires an open country panel
+  const ctx = await requireCountryView();
+  const scope: AdminScope = {
+    type: "COUNTRY",
+    countryId: ctx.countryId,
+    countryName: ctx.countryName,
+    countryCode: ctx.countryCode,
+  };
 
   const { error, status } = await searchParams;
   const statusFilter =
@@ -48,12 +54,8 @@ export default async function AdminAppointmentsPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title={scoped ? "Appointments" : "Appointments"}
-        subtitle={
-          scoped
-            ? `Bookings inside ${scope.countryName} — confirm, complete or cancel. Video appointments get a Jitsi meeting link.`
-            : "Confirm, complete or cancel patient bookings. Video appointments get a Jitsi meeting link."
-        }
+        title="Appointments"
+        subtitle={`Bookings inside ${scope.countryName} — confirm, complete or cancel. Video appointments get a Jitsi meeting link.`}
       />
 
       <ErrorBanner message={error} />
@@ -88,7 +90,6 @@ export default async function AdminAppointmentsPage({
               <p className="font-medium text-slate-900">{appt.doctor.name}</p>
               <p className="text-xs text-slate-400">
                 {appt.doctor.specialty.name} · {appt.facility.name}
-                {!scoped && ` · ${appt.facility.city.name}`}
               </p>
             </td>
             <td className="px-4 py-3">

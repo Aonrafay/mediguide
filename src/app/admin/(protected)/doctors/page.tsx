@@ -11,7 +11,8 @@ import {
   inputClass,
 } from "@/components/admin/table";
 import { deleteDoctor, saveDoctor } from "@/lib/actions/admin";
-import { doctorWhere, getAdminScope } from "@/lib/adminScope";
+import { doctorWhere, type AdminScope } from "@/lib/adminScope";
+import { requireCountryView } from "@/lib/adminContext";
 import { db } from "@/lib/db";
 import { GENDERS } from "@/lib/constants";
 import { formatFee } from "@/lib/utils";
@@ -165,9 +166,14 @@ function doctorFormFields(
 export default async function DoctorsPage({
   searchParams,
 }: PageProps<"/admin/doctors">) {
-  const scope = await getAdminScope();
-  if (!scope) return null;
-  const scoped = scope.type === "COUNTRY";
+  // Drill-down: requires an open country panel
+  const ctx = await requireCountryView();
+  const scope: AdminScope = {
+    type: "COUNTRY",
+    countryId: ctx.countryId,
+    countryName: ctx.countryName,
+    countryCode: ctx.countryCode,
+  };
 
   const { error, facility, specialty } = await searchParams;
   const facilityFilter = typeof facility === "string" ? facility : undefined;
@@ -175,7 +181,7 @@ export default async function DoctorsPage({
 
   const [facilities, specialties, doctors] = await Promise.all([
     db.facility.findMany({
-      where: scoped ? { city: { countryId: scope.countryId } } : {},
+      where: { city: { countryId: scope.countryId } },
       orderBy: { name: "asc" },
       include: { city: { include: { country: true } } },
     }),
@@ -199,11 +205,7 @@ export default async function DoctorsPage({
     <div className="space-y-6">
       <PageHeader
         title="Doctors"
-        subtitle={
-          scoped
-            ? `Doctors working in ${scope.countryName}'s facilities. Manage timings via Availability.`
-            : "Doctor profiles belong to a facility and a specialty. Manage timings via Availability."
-        }
+        subtitle={`Doctors working in ${scope.countryName}'s facilities. Manage timings via Availability.`}
       >
         <EntityDialog
           title="Add Doctor"

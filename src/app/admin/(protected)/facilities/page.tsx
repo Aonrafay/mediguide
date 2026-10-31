@@ -11,7 +11,8 @@ import {
   inputClass,
 } from "@/components/admin/table";
 import { deleteFacility, saveFacility } from "@/lib/actions/admin";
-import { facilityWhere, getAdminScope } from "@/lib/adminScope";
+import { facilityWhere, type AdminScope } from "@/lib/adminScope";
+import { requireCountryView } from "@/lib/adminContext";
 import { db } from "@/lib/db";
 
 export const metadata = { title: "Facilities" };
@@ -123,15 +124,20 @@ function facilityFormFields(
 export default async function FacilitiesPage({
   searchParams,
 }: PageProps<"/admin/facilities">) {
-  const scope = await getAdminScope();
-  if (!scope) return null;
-  const scoped = scope.type === "COUNTRY";
+  // Drill-down: requires an open country panel
+  const ctx = await requireCountryView();
+  const scope: AdminScope = {
+    type: "COUNTRY",
+    countryId: ctx.countryId,
+    countryName: ctx.countryName,
+    countryCode: ctx.countryCode,
+  };
 
   const { error } = await searchParams;
   const [cities, types, facilities] = await Promise.all([
     db.city.findMany({
-      where: scoped ? { countryId: scope.countryId } : {},
-      orderBy: [{ country: { name: "asc" } }, { name: "asc" }],
+      where: { countryId: scope.countryId },
+      orderBy: { name: "asc" },
       include: { country: { select: { name: true } } },
     }),
     db.facilityType.findMany({ orderBy: { name: "asc" } }),
@@ -150,11 +156,7 @@ export default async function FacilitiesPage({
     <div className="space-y-6">
       <PageHeader
         title="Facilities"
-        subtitle={
-          scoped
-            ? `Hospitals, clinics, complexes and labs inside ${scope.countryName}'s cities.`
-            : "Hospitals, clinics, medical complexes and labs inside each city."
-        }
+        subtitle={`Hospitals, clinics, complexes and labs inside ${scope.countryName}'s cities.`}
       >
         <EntityDialog
           title="Add Facility"
