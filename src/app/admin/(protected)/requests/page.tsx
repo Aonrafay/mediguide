@@ -17,6 +17,13 @@ const STATUS_BADGES: Record<string, string> = {
   REJECTED: "bg-rose-100 text-rose-700",
 };
 
+const BUSINESS_BADGES: Record<string, string> = {
+  HOSPITAL: "🏥 Hospital",
+  CLINIC: "🩺 Clinic",
+  LAB: "🔬 Lab",
+  PHARMACY: "💊 Pharmacy",
+};
+
 export default async function AdminRequestsPage({
   searchParams,
 }: PageProps<"/admin/requests">) {
@@ -34,7 +41,7 @@ export default async function AdminRequestsPage({
     <div className="space-y-6">
       <PageHeader
         title="Service Requests"
-        subtitle="Partnership requests from clinics, hospitals and doctors (the /services form). Activate to start managing their social media."
+        subtitle="Partnership requests from hospitals, clinics, labs and pharmacies (the /services form). Activate to start their digital-services engagement."
       />
 
       {error && (
@@ -57,6 +64,11 @@ export default async function AdminRequestsPage({
                   >
                     {request.status}
                   </span>
+                  {request.businessType && BUSINESS_BADGES[request.businessType] && (
+                    <span className="rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-semibold text-violet-700">
+                      {BUSINESS_BADGES[request.businessType]}
+                    </span>
+                  )}
                   {request.package && (
                     <span className="rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-700">
                       wants: {request.package.name}
@@ -150,7 +162,7 @@ export default async function AdminRequestsPage({
             <p className="mt-3 text-slate-500">
               No service requests yet — they arrive from the{" "}
               <a href="/services" className="text-teal-700 hover:underline">
-                For Clinics
+                Services
               </a>{" "}
               page.
             </p>

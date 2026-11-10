@@ -600,47 +600,135 @@ async function main() {
   }
 
   // ---------- Partner services: packages, showcase client, social log ----------
+  // audiences: HOSPITAL | CLINIC | LAB | PHARMACY (empty array = every provider type)
   const packageDefs = [
     {
       name: "Basic — Portfolio Page",
       tier: "BASIC",
+      category: "PRESENCE",
       description: "A professional portfolio page on MediGuide showcasing your facility, team and services.",
       features: ["Rich portfolio page", "Photo gallery", "Services & hours section", "Doctor team section", "Patient reviews display"],
       platforms: ["website"],
+      audiences: ["HOSPITAL", "CLINIC", "LAB", "PHARMACY"],
       priceLabel: "Rs 8,000 / year",
       sortOrder: 1,
     },
     {
       name: "Pro — Page + Social Setup",
       tier: "PRO",
+      category: "MARKETING",
       description: "Portfolio page plus professional setup of your Instagram, LinkedIn, X and Facebook pages.",
       features: ["Everything in Basic", "4 social pages created & branded", "Profile & cover design", "Bio and contact links", "First 3 posts published"],
       platforms: ["instagram", "linkedin", "x", "facebook", "website"],
+      audiences: ["HOSPITAL", "CLINIC", "LAB", "PHARMACY"],
       priceLabel: "Rs 15,000 / 3 months",
       sortOrder: 2,
     },
     {
       name: "Premium — Full Monthly Handling",
       tier: "PREMIUM",
+      category: "MARKETING",
       description: "We run your pages for you: content calendar, posts every week, replies and monthly growth report.",
       features: ["Everything in Pro", "Weekly posts on all platforms", "Content calendar & planning", "Comment & message handling", "Monthly performance report"],
       platforms: ["instagram", "linkedin", "x", "facebook", "website"],
+      audiences: ["HOSPITAL", "CLINIC", "LAB", "PHARMACY"],
       priceLabel: "Rs 25,000 / month",
       sortOrder: 3,
+    },
+    {
+      name: "Website + Online Booking",
+      tier: "PRO",
+      category: "OPERATIONS",
+      description: "Your own website with online appointment booking wired straight into MediGuide.",
+      features: ["Custom website & domain setup", "Online appointment booking", "Doctor profile & timing pages", "Contact forms & directions", "Mobile-friendly design"],
+      platforms: ["website"],
+      audiences: ["HOSPITAL", "CLINIC", "LAB"],
+      priceLabel: "Rs 30,000 / one-time",
+      sortOrder: 4,
+    },
+    {
+      name: "Google Business + Local SEO",
+      tier: "BASIC",
+      category: "MARKETING",
+      description: "Get found on Google Maps and Search — verified business profile, photos, reviews and local SEO.",
+      features: ["Google Business Profile setup & verification", "Photos, timing & service listings", "Review collection setup", "Local keyword optimization", "Monthly insights report"],
+      platforms: ["website"],
+      audiences: ["HOSPITAL", "CLINIC", "LAB", "PHARMACY"],
+      priceLabel: "Rs 6,000 / setup",
+      sortOrder: 5,
+    },
+    {
+      name: "Content Creation Pack",
+      tier: "PRO",
+      category: "MARKETING",
+      description: "A steady content engine: photo/video shoots at your premises plus designed posts every week.",
+      features: ["Monthly photo & video shoot", "12 designed posts per month", "Health-day & offer creatives", "Short patient-awareness videos", "Captions in EN + UR/AR"],
+      platforms: ["instagram", "linkedin", "x", "facebook"],
+      audiences: ["HOSPITAL", "CLINIC", "LAB", "PHARMACY"],
+      priceLabel: "Rs 12,000 / month",
+      sortOrder: 6,
+    },
+    {
+      name: "WhatsApp Business Setup",
+      tier: "BASIC",
+      category: "OPERATIONS",
+      description: "Turn WhatsApp into your front desk: catalog, auto-replies and inquiry handling.",
+      features: ["WhatsApp Business setup", "Service/product catalog", "Auto-replies & greeting flows", "Click-to-chat link on portfolio", "Staff quick-reply templates"],
+      platforms: ["website"],
+      audiences: ["HOSPITAL", "CLINIC", "LAB", "PHARMACY"],
+      priceLabel: "Rs 5,000 / setup",
+      sortOrder: 7,
+    },
+    {
+      name: "Digital Ad Campaigns",
+      tier: "CUSTOM",
+      category: "ADS",
+      description: "Targeted Meta & Google ads to bring new patients through your door — managed end to end.",
+      features: ["Facebook & Instagram ad management", "Google Search ads campaign", "Audience & area targeting", "Budget management & reporting", "Weekly performance summary"],
+      platforms: ["instagram", "facebook", "website"],
+      audiences: ["HOSPITAL", "CLINIC", "LAB", "PHARMACY"],
+      priceLabel: "Rs 10,000 / month + ad spend",
+      sortOrder: 8,
+    },
+    {
+      name: "Online Medicine Ordering",
+      tier: "PRO",
+      category: "OPERATIONS",
+      description: "Sell medicines online: full product catalog, WhatsApp ordering and home delivery.",
+      features: ["Medicine catalog (300+ items)", "WhatsApp order taking", "Home delivery coordination", "Refill reminders for patients", "Discount & offer banners"],
+      platforms: ["instagram", "facebook", "website"],
+      audiences: ["PHARMACY"],
+      priceLabel: "Rs 20,000 / setup",
+      sortOrder: 9,
+    },
+    {
+      name: "Lab Test Booking + Home Sampling",
+      tier: "PRO",
+      category: "OPERATIONS",
+      description: "Publish your test menu online, take bookings and schedule home sample collection.",
+      features: ["Online test menu & price list", "Home sample collection slots", "WhatsApp report delivery", "Health package promotions", "Corporate tie-up page"],
+      platforms: ["instagram", "facebook", "website"],
+      audiences: ["LAB"],
+      priceLabel: "Rs 20,000 / setup",
+      sortOrder: 10,
     },
   ];
   const packageMap = new Map<string, string>();
   for (const pkg of packageDefs) {
+    const data = {
+      ...pkg,
+      features: JSON.stringify(pkg.features),
+      platforms: JSON.stringify(pkg.platforms),
+      audiences: JSON.stringify(pkg.audiences),
+    };
     const created = await db.servicePackage.upsert({
       where: { name: pkg.name },
-      update: {},
-      create: {
-        ...pkg,
-        features: JSON.stringify(pkg.features),
-        platforms: JSON.stringify(pkg.platforms),
-      },
+      // refresh definition fields on re-seed (copy changes show up without a wipe)
+      update: data,
+      create: data,
     });
-    packageMap.set(pkg.tier, created.id);
+    // Key by name — tiers repeat across targeted packages (e.g. two PRO packs).
+    packageMap.set(pkg.name, created.id);
   }
 
   // Showcase client: Lahore General Hospital becomes a PRO portfolio client
@@ -711,18 +799,36 @@ async function main() {
     }
   }
 
-  // Demo service request from the dental clinic (matches the contact inbox story)
+  // Demo service requests (matches the contact inbox story):
+  // one clinic + one pharmacy so both business types are visible in demos.
   await db.serviceRequest.upsert({
     where: { id: "demo-request" },
-    update: {},
+    update: { businessType: "CLINIC", packageId: packageMap.get("Premium — Full Monthly Handling") ?? null },
     create: {
       id: "demo-request",
       businessName: "City Care Dental — Multan Branch",
+      businessType: "CLINIC",
       contactPerson: "Dr. Kamran Ali",
       email: "kamran@clinic.com",
       phone: "+92 300 1234567",
-      packageId: packageMap.get("PREMIUM") ?? null,
+      packageId: packageMap.get("Premium — Full Monthly Handling") ?? null,
       message: "We want the full monthly handling — Instagram and Facebook mainly, plus a portfolio page showing our implant work.",
+      status: "NEW",
+    },
+  });
+
+  await db.serviceRequest.upsert({
+    where: { id: "demo-request-pharmacy" },
+    update: { businessType: "PHARMACY", packageId: packageMap.get("Online Medicine Ordering") ?? null },
+    create: {
+      id: "demo-request-pharmacy",
+      businessName: "Sehat Pharmacy — Johar Town",
+      businessType: "PHARMACY",
+      contactPerson: "Hamza Sheikh",
+      email: "hamza@pharmacy.com",
+      phone: "+92 301 9876543",
+      packageId: packageMap.get("Online Medicine Ordering") ?? null,
+      message: "We want online medicine ordering with WhatsApp orders and a Google Maps listing so nearby patients can find us.",
       status: "NEW",
     },
   });

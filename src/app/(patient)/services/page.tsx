@@ -1,25 +1,11 @@
+import ServiceCatalog, { type CatalogTab } from "@/components/patient/ServiceCatalog";
 import ServiceRequestForm from "@/components/patient/ServiceRequestForm";
 import { getI18n } from "@/lib/i18n/server";
 import { db } from "@/lib/db";
 import { parseJsonArray } from "@/lib/slugs";
 
-export const metadata = { title: "For Clinics" };
+export const metadata = { title: "Services" };
 export const instant = false;
-
-const PLATFORM_ICONS: Record<string, string> = {
-  instagram: "📸 Instagram",
-  linkedin: "💼 LinkedIn",
-  x: "🐦 X",
-  facebook: "📘 Facebook",
-  website: "🌐 Website",
-};
-
-const TIER_BADGES: Record<string, { label: string; className: string }> = {
-  BASIC: { label: "BASIC", className: "bg-slate-100 text-slate-700" },
-  PRO: { label: "PRO", className: "bg-sky-100 text-sky-700" },
-  PREMIUM: { label: "PREMIUM", className: "bg-amber-100 text-amber-700" },
-  CUSTOM: { label: "CUSTOM", className: "bg-violet-100 text-violet-700" },
-};
 
 export default async function ServicesPage() {
   const { t } = await getI18n();
@@ -41,6 +27,12 @@ export default async function ServicesPage() {
     person: t("svc.person"),
     email: t("svc.email"),
     phone: t("svc.phone"),
+    busType: t("svc.busType"),
+    btHospital: t("svc.btHospital"),
+    btClinic: t("svc.btClinic"),
+    btLab: t("svc.btLab"),
+    btPharmacy: t("svc.btPharmacy"),
+    btOther: t("svc.btOther"),
     facility: t("svc.facility"),
     noFacility: t("svc.noFacility"),
     plan: t("svc.plan"),
@@ -49,25 +41,40 @@ export default async function ServicesPage() {
     sending: t("svc.sending"),
   };
 
+  const tabs: CatalogTab[] = [
+    { id: "ALL", icon: "✨", label: t("svc.audAll") },
+    { id: "HOSPITAL", icon: "🏥", label: t("svc.audHospital") },
+    { id: "CLINIC", icon: "🩺", label: t("svc.audClinic") },
+    { id: "LAB", icon: "🔬", label: t("svc.audLab") },
+    { id: "PHARMACY", icon: "💊", label: t("svc.audPharmacy") },
+  ];
+
   return (
     <main>
       {/* Hero */}
       <section className="bg-gradient-to-b from-slate-900 to-slate-800 text-white">
         <div className="mx-auto max-w-6xl px-4 py-16 text-center">
-          <p className="text-5xl">💼</p>
+          <p className="text-5xl">🖥️</p>
           <h1 className="mt-4 text-4xl font-bold sm:text-5xl">
             {t("svc.heroTitle")}
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-300">
             {t("svc.heroSub")}
           </p>
+
+          {/* Provider types we serve */}
           <div className="mt-8 flex flex-wrap justify-center gap-3 text-sm">
-            {["instagram", "linkedin", "x", "facebook", "website"].map((p) => (
+            {[
+              { icon: "🏥", label: t("svc.audHospital") },
+              { icon: "🩺", label: t("svc.audClinic") },
+              { icon: "🔬", label: t("svc.audLab") },
+              { icon: "💊", label: t("svc.audPharmacy") },
+            ].map((a) => (
               <span
-                key={p}
+                key={a.label}
                 className="rounded-full bg-white/10 px-4 py-1.5 font-medium"
               >
-                {PLATFORM_ICONS[p]}
+                {a.icon} {a.label}
               </span>
             ))}
           </div>
@@ -97,70 +104,30 @@ export default async function ServicesPage() {
         </div>
       </section>
 
-      {/* Packages */}
-      <section className="bg-white py-14">
+      {/* Plans — filtered by provider type */}
+      <section id="plans" className="bg-white py-14">
         <div className="mx-auto max-w-6xl px-4">
           <h2 className="text-center text-2xl font-bold text-slate-900">
             {t("svc.plansTitle")}
           </h2>
-          <div className="mt-8 grid gap-6 lg:grid-cols-3">
-            {packages.map((pkg) => {
-              const badge = TIER_BADGES[pkg.tier] ?? TIER_BADGES.CUSTOM!;
-              const features = parseJsonArray(pkg.features);
-              const platforms = parseJsonArray(pkg.platforms);
-              return (
-                <div
-                  key={pkg.id}
-                  className={`flex flex-col rounded-3xl border p-6 ${
-                    pkg.tier === "PREMIUM"
-                      ? "border-amber-300 shadow-md"
-                      : "border-slate-200"
-                  }`}
-                >
-                  <span
-                    className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${badge.className}`}
-                  >
-                    {badge.label}
-                  </span>
-                  <h3 className="mt-3 text-xl font-bold text-slate-900">
-                    {pkg.name}
-                  </h3>
-                  <p className="mt-2 text-2xl font-bold text-teal-700">
-                    {pkg.priceLabel}
-                  </p>
-                  <p className="mt-2 text-sm text-slate-500">{pkg.description}</p>
-                  <ul className="mt-4 flex-1 space-y-2 text-sm text-slate-600">
-                    {features.map((feature) => (
-                      <li key={feature} className="flex gap-2">
-                        <span className="text-teal-600">✔</span> {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="mt-4 flex flex-wrap gap-1.5">
-                    {platforms.map((p) => (
-                      <span
-                        key={p}
-                        className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600"
-                      >
-                        {PLATFORM_ICONS[p] ?? p}
-                      </span>
-                    ))}
-                  </div>
-                  <a
-                    href="#request"
-                    className={`mt-6 block rounded-xl px-4 py-2.5 text-center font-semibold transition ${
-                      pkg.tier === "PREMIUM"
-                        ? "bg-amber-500 text-white hover:bg-amber-600"
-                        : "bg-teal-600 text-white hover:bg-teal-700"
-                    }`}
-                  >
-                    {t("svc.requestTitle")}
-                  </a>
-                </div>
-              );
-            })}
-          </div>
+          <p className="mx-auto mt-2 max-w-xl text-center text-sm text-slate-500">
+            {t("svc.plansSub")}
+          </p>
         </div>
+        <ServiceCatalog
+          tabs={tabs}
+          requestLabel={t("svc.requestTitle")}
+          packages={packages.map((pkg) => ({
+            id: pkg.id,
+            name: pkg.name,
+            tier: pkg.tier,
+            description: pkg.description,
+            priceLabel: pkg.priceLabel,
+            features: parseJsonArray(pkg.features),
+            platforms: parseJsonArray(pkg.platforms),
+            audiences: parseJsonArray(pkg.audiences),
+          }))}
+        />
       </section>
 
       {/* Request form */}

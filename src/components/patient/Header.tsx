@@ -22,7 +22,7 @@ export default async function PatientHeader() {
     { href: "/doctors", label: t("nav.findDoctors") },
     { href: "/blog", label: t("nav.blog") },
     { href: "/about", label: t("nav.about") },
-    { href: "/services", label: t("nav.forClinics") },
+    { href: "/services", label: t("nav.services") },
     { href: "/contact", label: t("nav.contact") },
   ];
 

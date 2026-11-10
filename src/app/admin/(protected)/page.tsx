@@ -22,8 +22,8 @@ export const metadata = { title: "Admin Home" };
 export const instant = false;
 
 const GLOBAL_TOOLS = [
-  { href: "/admin/requests", icon: "💼", label: "Service Requests", desc: "Clinics asking for portfolio/social" },
-  { href: "/admin/clients", icon: "🤝", label: "Partner Clients", desc: "Active social-media engagements" },
+  { href: "/admin/requests", icon: "💼", label: "Service Requests", desc: "Hospitals, clinics, labs & pharmacies requesting digital services" },
+  { href: "/admin/clients", icon: "🤝", label: "Partner Clients", desc: "Active digital-service engagements" },
   { href: "/admin/facility-types", icon: "🏥", label: "Facility Types", desc: "Hospital, Clinic, Complex, Lab" },
   { href: "/admin/specialties", icon: "🩺", label: "Specialties", desc: "Medical specialties list" },
   { href: "/admin/users", icon: "👥", label: "Users", desc: "Accounts & country admins" },

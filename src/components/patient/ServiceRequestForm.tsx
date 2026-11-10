@@ -45,7 +45,7 @@ export default function ServiceRequestForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="block text-sm font-medium text-slate-700">{labels.email}</label>
-          <input name="email" type="email" required className={inputClass} placeholder="you@clinic.com" />
+          <input name="email" type="email" required className={inputClass} placeholder="you@your-facility.com" />
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700">{labels.phone}</label>
@@ -53,6 +53,16 @@ export default function ServiceRequestForm({
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="block text-sm font-medium text-slate-700">{labels.busType}</label>
+          <select name="businessType" className={inputClass} defaultValue="">
+            <option value="">{labels.btOther}</option>
+            <option value="HOSPITAL">{labels.btHospital}</option>
+            <option value="CLINIC">{labels.btClinic}</option>
+            <option value="LAB">{labels.btLab}</option>
+            <option value="PHARMACY">{labels.btPharmacy}</option>
+          </select>
+        </div>
         <div>
           <label className="block text-sm font-medium text-slate-700">{labels.facility}</label>
           <select name="facilityId" className={inputClass} defaultValue="">
@@ -64,17 +74,17 @@ export default function ServiceRequestForm({
             ))}
           </select>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700">{labels.plan}</label>
-          <select name="packageId" className={inputClass} defaultValue="">
-            <option value="">Not sure yet — advise me</option>
-            {packages.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-700">{labels.plan}</label>
+        <select name="packageId" className={inputClass} defaultValue="">
+          <option value="">Not sure yet — advise me</option>
+          {packages.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">{labels.msgLabel}</label>

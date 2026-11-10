@@ -28,7 +28,7 @@ export default async function AdminClientsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Partner Clients"
-        subtitle="Facilities whose portfolio pages and social media are managed by MediGuide."
+        subtitle="Facilities with active digital-service engagements — portfolio pages, social media, ads, ordering and more."
       />
 
       <div className="space-y-4">

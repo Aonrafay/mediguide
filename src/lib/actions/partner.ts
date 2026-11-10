@@ -33,11 +33,17 @@ async function run(path: string, mutate: () => Promise<unknown>) {
 
 export type ServiceRequestState = { error?: string; success?: string };
 
+const BUSINESS_TYPES = ["HOSPITAL", "CLINIC", "LAB", "PHARMACY"] as const;
+
 export async function submitServiceRequest(
   _prev: ServiceRequestState,
   formData: FormData
 ): Promise<ServiceRequestState> {
   const businessName = str(formData, "businessName");
+  const rawBusinessType = str(formData, "businessType").toUpperCase();
+  const businessType = (BUSINESS_TYPES as readonly string[]).includes(rawBusinessType)
+    ? rawBusinessType
+    : "";
   const contactPerson = str(formData, "contactPerson");
   const email = str(formData, "email").toLowerCase();
   const phone = str(formData, "phone");
@@ -56,6 +62,7 @@ export async function submitServiceRequest(
     await db.serviceRequest.create({
       data: {
         businessName,
+        businessType,
         contactPerson,
         email,
         phone: phone || null,
@@ -68,9 +75,19 @@ export async function submitServiceRequest(
     return { error: "Could not submit your request — try again." };
   }
 
+  const typeLabel =
+    businessType === "HOSPITAL"
+      ? "hospital"
+      : businessType === "LAB"
+        ? "lab"
+        : businessType === "PHARMACY"
+          ? "pharmacy"
+          : businessType === "CLINIC"
+            ? "clinic"
+            : "provider";
   await notifyAdmins(
     "New service request 💼",
-    `${businessName} (${contactPerson}) requested a partner service.`
+    `${businessName} (${contactPerson}) — a ${typeLabel} — requested digital services.`
   );
 
   revalidatePath("/admin/requests");
@@ -107,12 +124,23 @@ export async function activateServiceRequest(formData: FormData) {
     if (!request) return "Request not found.";
 
     let facilityId = request.facilityId;
-    // If the request has no linked facility yet, create one in the first city
+    // If the request has no linked facility yet, create one in the first city.
+    // Facility type follows the requested business type where a directory type
+    // exists (pharmacies aren't a directory type yet — fall back to Clinic).
     if (!facilityId) {
       const city = await db.city.findFirst({ orderBy: { name: "asc" } });
-      const type = await db.facilityType.findFirst({
-        where: { name: "Clinic" },
+      const preferredTypeName =
+        request.businessType === "HOSPITAL"
+          ? "Hospital"
+          : request.businessType === "LAB"
+            ? "Lab"
+            : "Clinic";
+      let type = await db.facilityType.findFirst({
+        where: { name: preferredTypeName },
       });
+      if (!type) {
+        type = await db.facilityType.findFirst({ where: { name: "Clinic" } });
+      }
       if (!city || !type) return "No city/type found to create a facility.";
       const facility = await db.facility.create({
         data: {

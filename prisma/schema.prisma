@@ -294,9 +294,11 @@ model ServicePackage {
   id          String  @id @default(cuid())
   name        String  @unique // e.g. "Basic — Portfolio Page"
   tier        String // BASIC | PRO | PREMIUM | CUSTOM
+  category    String  @default("PRESENCE") // PRESENCE | MARKETING | OPERATIONS | ADS
   description String
   features    String  @default("[]") // JSON array of feature strings
   platforms   String  @default("[]") // JSON array: instagram, linkedin, x, facebook, website
+  audiences   String  @default("[]") // JSON array: HOSPITAL, CLINIC, LAB, PHARMACY (empty = all)
   priceLabel  String // display string, e.g. "Rs 15,000 / month"
   sortOrder   Int     @default(0)
   isActive    Boolean @default(true)
@@ -307,6 +309,7 @@ model ServicePackage {
 model ServiceRequest {
   id            String   @id @default(cuid())
   businessName  String
+  businessType  String   @default("") // HOSPITAL | CLINIC | LAB | PHARMACY ("" = other/unsure)
   contactPerson String
   email         String
   phone         String?
