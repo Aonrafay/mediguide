@@ -5,11 +5,14 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postinstall": "prisma generate",
+    "seed": "tsx prisma/seed.ts",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.10.1",
+    "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
@@ -23,6 +26,7 @@
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

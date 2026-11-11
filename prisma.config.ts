@@ -9,8 +9,8 @@ export default defineConfig({
     path: path.join(__dirname, "prisma", "migrations"),
   },
   datasource: {
-    // Resolved relative to the project root — same file the runtime adapter
-    // opens (see src/lib/db.ts). Switch to a Postgres URL for Neon later.
-    url: process.env.DATABASE_URL ?? "file:./prisma/dev.db",
+    // Postgres (Neon) — same URL the runtime adapter opens (see src/lib/db.ts)
+    // and that Vercel injects from the connected marketplace database.
+    url: process.env.DATABASE_URL ?? "",
   },
 });

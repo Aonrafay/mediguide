@@ -2,15 +2,16 @@
  * MediGuide seed script — populates the database with an admin account and
  * realistic demo data for development and the viva demo.
  *
- * Run: npx tsx prisma/seed.ts
+ * Run: npx tsx prisma/seed.ts  (uses DATABASE_URL from .env)
  */
+import "dotenv/config";
 import bcrypt from "bcryptjs";
 
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
-const adapter = new PrismaBetterSqlite3({
-  url: process.env.DATABASE_URL ?? "file:./prisma/dev.db",
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL ?? "",
 });
 const db = new PrismaClient({ adapter });
 
@@ -119,24 +120,7 @@ async function main() {
   }
 
   // ---------- Department account (Lahore General Hospital) ----------
-  const lhrHospital = await db.facility.findFirst({
-    where: { name: "Lahore General Hospital" },
-  });
-  if (lhrHospital) {
-    await db.user.upsert({
-      where: { email: "lhg-dept@mediguide.com" },
-      update: { role: "DEPARTMENT", facilityId: lhrHospital.id },
-      create: {
-        name: "Lahore General — Front Desk",
-        email: "lhg-dept@mediguide.com",
-        passwordHash: await bcrypt.hash("Dept@123", 10),
-        role: "DEPARTMENT",
-        facilityId: lhrHospital.id,
-      },
-    });
-  }
-
-  // ---------- Facilities & doctors (demo: Lahore, Karachi, Dubai, Istanbul) ----------
+  // Created after facility seeding below so the facility exists on a fresh DB.
   type FacilitySeed = {
     name: string;
     city: string;
@@ -276,6 +260,25 @@ async function main() {
     }
   }
 
+  // ---------- Department account (Lahore General Hospital) ----------
+  // Created after facility seeding so the facility exists on a fresh DB.
+  const lhrHospital = await db.facility.findFirst({
+    where: { name: "Lahore General Hospital" },
+  });
+  if (lhrHospital) {
+    await db.user.upsert({
+      where: { email: "lhg-dept@mediguide.com" },
+      update: { role: "DEPARTMENT", facilityId: lhrHospital.id },
+      create: {
+        name: "Lahore General — Front Desk",
+        email: "lhg-dept@mediguide.com",
+        passwordHash: await bcrypt.hash("Dept@123", 10),
+        role: "DEPARTMENT",
+        facilityId: lhrHospital.id,
+      },
+    });
+  }
+
   // ---------- Demo reviews (make doctor pages look alive) ----------
   const reviewerHash = await bcrypt.hash("Patient@123", 10);
   const reviewers = [
@@ -325,11 +328,18 @@ async function main() {
   // ---------- Demo approval-chain bookings ----------
   // One PENDING (awaiting admin) and one APPROVED (awaiting department) so
   // every queue state is visible in demos.
+  const ayeshaPatient = await db.user.upsert({
+    where: { email: "ayesha@test.com" },
+    update: {},
+    create: {
+      name: "Ayesha Khan",
+      email: "ayesha@test.com",
+      passwordHash: await bcrypt.hash("Patient@123", 10),
+      role: "PATIENT",
+    },
+  });
   const ahmedDoctor = await db.doctor.findFirst({
     where: { name: "Dr. Ahmed Hassan" },
-  });
-  const ayeshaPatient = await db.user.findUnique({
-    where: { email: "ayesha@test.com" },
   });
   if (ahmedDoctor && ayeshaPatient) {
     // A PENDING booking 5 days out

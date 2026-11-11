@@ -1,7 +1,6 @@
-// MediGuide — Prisma schema (SQLite for development)
+// MediGuide — Prisma schema (PostgreSQL — Neon for dev + production)
 // NOTE: SQLite has no enums/arrays — those are modeled as String fields and
-// validated in application code (see src/lib/constants.ts). The schema is
-// written so it can be switched to PostgreSQL later with minimal changes.
+// validated in application code (see src/lib/constants.ts).
 
 generator client {
   provider = "prisma-client"
@@ -9,7 +8,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model User {
