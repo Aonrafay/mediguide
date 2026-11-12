@@ -116,9 +116,15 @@ export default async function HistoryPage({
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10">
-      <nav className="text-sm text-slate-500">
+      <nav className="flex items-center justify-between text-sm text-slate-500">
         <Link href="/account" className="hover:text-teal-700">
           {t("notif.back")}
+        </Link>
+        <Link
+          href="/account/transfer"
+          className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-600 transition hover:bg-slate-50"
+        >
+          {t("acct.transferLink")}
         </Link>
       </nav>
 

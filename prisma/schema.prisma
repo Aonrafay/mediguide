@@ -27,6 +27,7 @@ model User {
   facility      Facility?     @relation(fields: [facilityId], references: [id])
   doctorProfile Doctor?
   appointments  Appointment[] @relation("PatientAppointments")
+  historyTransfers HistoryTransfer[] @relation("PatientHistoryTransfers")
   reviews       Review[]
   favourites    Favourite[]
   notifications Notification[]
@@ -97,6 +98,8 @@ model Facility {
   departmentUsers User[]     // department portal accounts
   doctors      Doctor[]
   appointments Appointment[]
+  transfersIn  HistoryTransfer[] @relation("HistoryTransferTarget")
+  transfersOut HistoryTransfer[] @relation("HistoryTransferSource")
   clientService ClientService?
   serviceRequests ServiceRequest[]
 
@@ -187,6 +190,7 @@ model Appointment {
   patient User     @relation("PatientAppointments", fields: [patientId], references: [id])
   doctor  Doctor   @relation(fields: [doctorId], references: [id])
   facility Facility @relation(fields: [facilityId], references: [id])
+  transferItems HistoryTransferItem[]
 
   @@index([doctorId, date])
   @@index([patientId])
@@ -354,4 +358,37 @@ model SocialPost {
   clientService ClientService @relation(fields: [clientServiceId], references: [id], onDelete: Cascade)
 
   @@index([clientServiceId, status])
+}
+
+/* ------------------ Patient history transfer (Phase 16) ------------------ */
+
+model HistoryTransfer {
+  id               String   @id @default(cuid())
+  patientId        String
+  sourceFacilityId String? // facility the records come from (null = entire record)
+  targetFacilityId String // receiving facility
+  status           String   @default("NEW") // NEW | ACCEPTED | DECLINED | REVOKED | CANCELLED
+  note             String? // patient's reason / message
+  declineReason    String?
+  decidedAt        DateTime?
+  createdAt        DateTime @default(now())
+
+  patient        User     @relation("PatientHistoryTransfers", fields: [patientId], references: [id])
+  sourceFacility Facility? @relation("HistoryTransferSource", fields: [sourceFacilityId], references: [id])
+  targetFacility Facility  @relation("HistoryTransferTarget", fields: [targetFacilityId], references: [id])
+  items          HistoryTransferItem[]
+
+  @@index([patientId])
+  @@index([targetFacilityId, status])
+}
+
+model HistoryTransferItem {
+  id            String @id @default(cuid())
+  transferId    String
+  appointmentId String
+
+  transfer    HistoryTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  appointment Appointment     @relation(fields: [appointmentId], references: [id])
+
+  @@unique([transferId, appointmentId])
 }

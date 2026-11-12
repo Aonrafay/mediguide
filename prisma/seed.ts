@@ -843,6 +843,87 @@ async function main() {
     },
   });
 
+  // ---------- Department accounts for more facilities (history-transfer demos) ----------
+  const deptSeeds = [
+    { facility: "City Care Clinic", email: "citycare-dept@mediguide.com", name: "City Care — Front Desk" },
+    { facility: "Shifa Medical Complex", email: "shifa-dept@mediguide.com", name: "Shifa Medical Complex — Front Desk" },
+    { facility: "Marina Health Hospital", email: "marina-dept@mediguide.com", name: "Marina Health — Front Desk" },
+  ];
+  for (const d of deptSeeds) {
+    const facility = await db.facility.findFirst({ where: { name: d.facility } });
+    if (!facility) continue;
+    await db.user.upsert({
+      where: { email: d.email },
+      update: { role: "DEPARTMENT", facilityId: facility.id },
+      create: {
+        name: d.name,
+        email: d.email,
+        passwordHash: await bcrypt.hash("Dept@123", 10),
+        role: "DEPARTMENT",
+        facilityId: facility.id,
+      },
+    });
+  }
+
+  // ---------- Demo history transfers (Ayesha) ----------
+  const ayeshaUser = await db.user.findUnique({ where: { email: "ayesha@test.com" } });
+  const lahoreGeneralFacility = await db.facility.findFirst({ where: { name: "Lahore General Hospital" } });
+  const cityCareFacility = await db.facility.findFirst({ where: { name: "City Care Clinic" } });
+  const shifaFacility = await db.facility.findFirst({ where: { name: "Shifa Medical Complex" } });
+  if (ayeshaUser && lahoreGeneralFacility && cityCareFacility && shifaFacility) {
+    const ayeshaAppts = await db.appointment.findMany({
+      where: { patientId: ayeshaUser.id },
+      orderBy: { date: "asc" },
+    });
+
+    // 1) NEW — awaiting City Care Clinic's response
+    const newTransfer = await db.historyTransfer.upsert({
+      where: { id: "demo-transfer-new" },
+      update: {},
+      create: {
+        id: "demo-transfer-new",
+        patientId: ayeshaUser.id,
+        sourceFacilityId: lahoreGeneralFacility.id,
+        targetFacilityId: cityCareFacility.id,
+        status: "NEW",
+        note: "Moving my follow-up care to City Care — sharing my cardiology records.",
+      },
+    });
+    for (const appt of ayeshaAppts) {
+      await db.historyTransferItem.upsert({
+        where: {
+          transferId_appointmentId: { transferId: newTransfer.id, appointmentId: appt.id },
+        },
+        update: {},
+        create: { transferId: newTransfer.id, appointmentId: appt.id },
+      });
+    }
+
+    // 2) ACCEPTED — already shared with Shifa Medical Complex
+    const acceptedTransfer = await db.historyTransfer.upsert({
+      where: { id: "demo-transfer-accepted" },
+      update: {},
+      create: {
+        id: "demo-transfer-accepted",
+        patientId: ayeshaUser.id,
+        sourceFacilityId: lahoreGeneralFacility.id,
+        targetFacilityId: shifaFacility.id,
+        status: "ACCEPTED",
+        note: "Ongoing treatment reference for my move to Karachi.",
+        decidedAt: new Date(),
+      },
+    });
+    for (const appt of ayeshaAppts) {
+      await db.historyTransferItem.upsert({
+        where: {
+          transferId_appointmentId: { transferId: acceptedTransfer.id, appointmentId: appt.id },
+        },
+        update: {},
+        create: { transferId: acceptedTransfer.id, appointmentId: appt.id },
+      });
+    }
+  }
+
   // ---------- Languages ----------
   const langs = [
     { code: "en", name: "English", nativeName: "English", direction: "ltr", isDefault: true },
